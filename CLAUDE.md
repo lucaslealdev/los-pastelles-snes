@@ -81,7 +81,7 @@ The version of each build (`node gerador/versao.js`) is:
   - installs cc65, Pillow and SDL2 via apt, with Mesen 2.1.1 cached;
   - computes the version and compiles with `node build.js` (which includes the width checker);
   - runs `teste/ci.lua` headless;
-  - uploads the ROM as an artifact (`LosPastelles-<version>.sfc`, kept for 14 days).
+  - uploads the ROM as an unzipped artifact (`archive: false`, `LosPastelles-<version>.sfc`, kept for 14 days).
 - **Push to `main`:** the version is the next one (e.g. `0.0.2`). The `release` job (the only one with `contents: write`) creates the `v<version>` tag on the commit and publishes the release with the ROM.
   - Runs on `main` are queued, never in parallel, so two releases never compute the same version.
 - **Pull requests:** the version is `<next>-pr.<number>+<sha>`. The PR's ROM is the artifact of the run, linked in the run summary. A new push cancels the PR's previous run.

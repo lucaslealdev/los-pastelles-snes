@@ -32,7 +32,7 @@ jobs:
     outputs:
       version: ${{ steps.versao.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Busca as tags (versões já lançadas)
         run: git fetch --quiet --depth=1 --tags origin
@@ -44,7 +44,7 @@ jobs:
 
       - name: Cache do Mesen
         id: mesen
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: teste/mesen/Mesen
           key: mesen-${{ env.MESEN_VERSION }}-linux-x64
@@ -100,10 +100,11 @@ jobs:
 
       - name: Envia a ROM (artefato)
         id: artefato
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: LosPastelles-${{ steps.versao.outputs.version }}
+          # sem zip: o artefato e o proprio .sfc (e leva o nome do arquivo)
           path: LosPastelles-${{ steps.versao.outputs.version }}.sfc
+          archive: false
           retention-days: 14
           if-no-files-found: error
 
@@ -121,9 +122,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
-          name: LosPastelles-${{ needs.build.outputs.version }}
+          name: LosPastelles-${{ needs.build.outputs.version }}.sfc
 
       - name: Publica o release
         env:
