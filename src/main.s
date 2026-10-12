@@ -655,6 +655,12 @@ PrintStrB:
     bra @lp
 @ch:
     sta bg3_buf,x
+    cmp #FONT_BTN0
+    bcc @attr
+    cmp #(FONT_BTN0+N_BTN)
+    bcs @attr
+    jsr BtnReg              ; botao: o sprite colorido e desenhado por cima
+@attr:
     lda txt_attr
     sta bg3_buf+1,x
     inx
@@ -788,7 +794,7 @@ AddSprite:
 @ok:
     A8
     ldx oam_idx
-    cpx #512
+    cpx #OAM_BTN            ; os ultimos slots ficam para os botoes do texto
     bcs @skip
     lda spr_x
     sta oam_buf,x

@@ -5,6 +5,7 @@
 ;  - caixa que abre com efeito elastico (rolagem vertical por linha)
 ;  - faixas do HUD do expediente com brilho de vidro
 ;  - texto que aparece letra por letra (maquina de escrever)
+;  - botoes do controle coloridos no meio do texto (sprites sobre glifos vazios)
 ;  - xadrez do fundo (BG2) rolando para a direita sem parar
 ; Canais: 7 = COLDATA, 6 = BG1VOFS, 5 = BG3VOFS (o canal 0 fica com o DMA comum)
 
@@ -218,6 +219,7 @@ UiUpdate:
     .a8
     .i16
     jsr TypeStep
+    jsr BtnSprites
     lda ui_mode
     cmp #UI_PANEL
     beq :+
@@ -387,6 +389,12 @@ TypeStep:
 :   ldx tw_pos
     sta bg3_buf,x
     pha
+    cmp #FONT_BTN0
+    bcc @nobtn
+    cmp #(FONT_BTN0+N_BTN)
+    bcs @nobtn
+    jsr BtnReg
+@nobtn:
     lda tw_attr
     sta bg3_buf+1,x
     inx
@@ -415,3 +423,134 @@ TypeFinish:
     jsr TypeStep
     bra @l
 :   rts
+
+; ---------------------------------------------------------------- botoes no texto
+; Os textos marcam botoes com {A} {B} {X} {Y} {CIMA}...: o glifo e vazio e um
+; sprite 8x8 colorido e desenhado por cima. PrintStr/TypeStep registram a posicao
+; (BtnReg); a cada quadro BtnSprites confere se o glifo ainda esta la (o texto pode
+; ter sido apagado ou sobrescrito) e escreve os ultimos slots da OAM.
+
+; A = glifo, X = deslocamento no bg3_buf (preserva X e Y)
+BtnReg:
+    .a8
+    .i16
+    sta btn_tcode
+    stx btn_tpos
+    phx
+    phy
+    ; mesma posicao ja registrada: reaproveita
+    ldy #0
+@same:
+    lda btn_tab+2,y
+    beq @nsame
+    A16
+    lda btn_tab,y
+    cmp btn_tpos
+    A8
+    beq @put
+@nsame:
+    iny
+    iny
+    iny
+    iny
+    cpy #(BTN_SLOTS*4)
+    bne @same
+    ; senao, o primeiro registro livre ou obsoleto
+    ldy #0
+@free:
+    lda btn_tab+2,y
+    beq @put
+    A16
+    lda btn_tab,y
+    tax
+    A8
+    lda bg3_buf,x
+    cmp btn_tab+2,y
+    bne @put
+    iny
+    iny
+    iny
+    iny
+    cpy #(BTN_SLOTS*4)
+    bne @free
+    bra @out               ; tudo ocupado: fica sem o sprite
+@put:
+    A16
+    lda btn_tpos
+    sta btn_tab,y
+    A8
+    lda btn_tcode
+    sta btn_tab+2,y
+@out:
+    ply
+    plx
+    rts
+
+; escreve os slots OAM_BTN.. (chamada todo quadro, depois da tela montar a OAM)
+BtnSprites:
+    .a8
+    .i16
+    ldx #0
+@lp:
+    lda btn_tab+2,x
+    beq @hide
+    lda ui_open            ; caixa abrindo (texto esticado): espera
+    bne @hide
+    phx
+    A16
+    lda btn_tab,x
+    tax
+    A8
+    lda bg3_buf,x
+    plx
+    cmp btn_tab+2,x
+    beq @show
+    stz btn_tab+2,x        ; o texto mudou: libera
+@hide:
+    lda #$F0
+    sta oam_buf+OAM_BTN+1,x
+    bra @nx
+@show:
+    ; posicao = (linha*32 + coluna)*2  ->  x = coluna*8, y = linha*8
+    A16
+    lda btn_tab,x
+    and #$003F
+    asl a
+    asl a
+    A8
+    sta oam_buf+OAM_BTN,x
+    A16
+    lda btn_tab,x
+    lsr a
+    lsr a
+    lsr a
+    and #$00F8
+    A8
+    dec a                  ; o sprite aparece 1 linha abaixo da coordenada
+    sta oam_buf+OAM_BTN+1,x
+    lda btn_tab+2,x
+    sec
+    sbc #FONT_BTN0
+    A16
+    and #$00FF
+    asl a
+    tay
+    lda BtnSprTile,y
+    A8
+    sta oam_buf+OAM_BTN+2,x
+    xba
+    and #$01
+    ora #$30               ; prioridade 3, paleta 0
+    sta oam_buf+OAM_BTN+3,x
+@nx:
+    inx
+    inx
+    inx
+    inx
+    cpx #(BTN_SLOTS*4)
+    bne @lp
+    ; tabela alta: 8x8 e x < 256 para os slots 116..127
+    stz oam_buf+512+(OAM_BTN/16)
+    stz oam_buf+512+(OAM_BTN/16)+1
+    stz oam_buf+512+(OAM_BTN/16)+2
+    rts

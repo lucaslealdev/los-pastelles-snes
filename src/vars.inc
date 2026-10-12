@@ -203,3 +203,9 @@ tw_line:    .res 2
 tw_attr:    .res 1
 tw_n:       .res 1
 hdma_tab:   .res 452
+; botoes desenhados no meio do texto (sprites nos ultimos slots da OAM)
+BTN_SLOTS = 12
+OAM_BTN   = 4 * (128 - BTN_SLOTS)   ; AddSprite nao passa daqui
+btn_tab:    .res BTN_SLOTS * 4      ; [posicao no bg3_buf (2), glifo (1; 0 = livre), -]
+btn_tpos:   .res 2
+btn_tcode:  .res 1

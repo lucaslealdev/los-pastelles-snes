@@ -58,6 +58,11 @@ teste/mesen/Mesen.exe --testrunner LosPastelles.sfc teste/bot.lua
 The generator modules:
 - `gerador/textos.js` defines every game string as `T` (key → text, uppercase, `\n` = new line) plus `CARDS`.
 - `gerador/fonte.js` turns text into tile codes with `compile()`. A character without a glyph throws at build time, so any new accented or special character needs a glyph in `G` first.
+- To show a controller button inside text, use the tokens `{A}` `{B}` `{X}` `{Y}` `{CIMA}` `{BAIXO}` `{ESQ}` `{DIR}` (never a bare letter):
+  - `compile()` turns each token into a transparent glyph (codes `FONT_BTN0`…`FONT_BTN0+N_BTN-1`).
+  - `PrintStr`/`TypeStep` record its position via `BtnReg` in `ui.s`.
+  - Every frame, `BtnSprites` draws a colored 8×8 button sprite (`SPR_BTN8_*`, sprite palette 0) over each recorded position that still holds the glyph.
+  - The sprites use the last 12 OAM slots (`OAM_BTN`), so `AddSprite` stops before them. At most 12 buttons can be on screen at once.
 - `gerador/arte.js` and `gerador/gfx.js` contain all pixel art as code: scenes, sprites, palettes and 4bpp encoding. `shopScene(bairro, reforma)` gives 5 neighborhoods × 3 renovation stages.
 - `gerador/audio.js` contains the SPC700 driver blob and the chiptune songs and SFX.
 - `gerador/ui_tabs.js` builds the HDMA gradient and animation tables.

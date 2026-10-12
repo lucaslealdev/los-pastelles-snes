@@ -1,7 +1,7 @@
 // Arte do jogo: cenarios (BG1) e folha de sprites
 'use strict';
 const { Img, sceneToBG, enc4, tilePixels, palBytes } = require('./gfx');
-const { GLYPHS } = require('./fonte');
+const { GLYPHS, BOTOES } = require('./fonte');
 
 // ---------------------------------------------------------------- texto grande nos cenarios
 function drawText(I, s, x, y, col, scale = 1) {
@@ -594,8 +594,8 @@ function botao(tipo) {
     const [c, c2] = cores[tipo];
     I.ell(1, 1, 14, 14, c2); I.ell(1, 1, 13, 13, c);
     I.set(4, 3, w); I.set(5, 3, w); I.set(3, 4, w);
-    const gl = GLYPHS[tipo];
-    for (let yy = 0; yy < 7; yy++) for (let xx = 0; xx < 5; xx++) if (gl[yy][xx] === '#') I.set(xx + 5, yy + 4, w);
+    const gl = GLYPHS[tipo], cl = tipo === 'B' ? k : w; // letra preta no amarelo (contraste)
+    for (let yy = 0; yy < 7; yy++) for (let xx = 0; xx < 5; xx++) if (gl[yy][xx] === '#') I.set(xx + 5, yy + 4, cl);
   } else if (tipo === 'OK') {
     I.ell(1, 1, 14, 14, N); I.ell(1, 1, 13, 13, n);
     [[4, 8], [5, 9], [6, 10], [7, 9], [8, 8], [9, 7], [10, 6], [11, 5]].forEach(([x, yy]) => { I.set(x, yy, w); I.set(x, yy + 1, w); });
@@ -610,6 +610,32 @@ function botao(tipo) {
     if (tipo === 'R') { I.set(13, 7, w); I.set(13, 8, w); I.vline(12, 6, 4, w); }
   }
   I.outline(k);
+  return I;
+}
+// botao 8x8 para aparecer no meio do texto (mesmas cores do botao do minijogo)
+const LETRA3 = {
+  A: ['.#.', '#.#', '###', '#.#', '#.#'], B: ['##.', '#.#', '##.', '#.#', '##.'],
+  X: ['#.#', '#.#', '.#.', '#.#', '#.#'], Y: ['#.#', '#.#', '.#.', '.#.', '.#.'],
+};
+function botao8(tipo) {
+  const k = 1, w = 2, g = 3, G = 4, y = 5, o = 6, r = 9, R = 10, n = 11, N = 12, u = 15;
+  const I = new Img(8, 8);
+  const cores = { A: [r, R], B: [y, o], X: [u, k], Y: [n, N] };
+  if (cores[tipo]) {
+    const [c, c2] = cores[tipo];
+    // disco com contorno preto e sombra embaixo/direita no tom escuro
+    I.rect(2, 0, 4, 8, k); I.rect(1, 1, 6, 6, k); I.rect(0, 2, 8, 4, k);
+    I.rect(2, 1, 4, 6, c2); I.rect(1, 2, 6, 4, c2);
+    I.rect(2, 1, 4, 5, c); I.rect(1, 2, 5, 3, c);
+    const l = LETRA3[tipo], cl = tipo === 'B' ? k : w; // letra preta no amarelo (contraste)
+    for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 3; xx++) if (l[yy][xx] === '#') I.set(xx + 2, yy + 1, cl);
+  } else {
+    // cruz direcional com o lado pedido aceso
+    I.rect(2, 0, 4, 8, k); I.rect(0, 2, 8, 4, k);
+    I.rect(3, 1, 2, 6, G); I.rect(1, 3, 6, 2, G); I.rect(3, 3, 2, 2, g);
+    const arm = { CIMA: [3, 1, 2, 2], BAIXO: [3, 5, 2, 2], ESQ: [1, 3, 2, 2], DIR: [5, 3, 2, 2] }[tipo];
+    I.rect(arm[0], arm[1], arm[2], arm[3], y);
+  }
   return I;
 }
 // entregas: telefone de parede, monitor de pedidos e moto do motoboy (paleta 0)
@@ -664,8 +690,8 @@ function buildSprites() {
   const sheet = new Img(128, 256); // cada pixel guarda (pal<<4)|cor para preview
   const occ = new Array(16 * 32).fill(false);
   const ids = {};
-  function alloc(sz) { // sz em tiles (1,2,4)
-    for (let ty = 0; ty < 32; ty++) for (let tx = 0; tx <= 16 - sz; tx++) {
+  function alloc(sz, minTy = 0) { // sz em tiles (1,2,4)
+    for (let ty = minTy; ty < 32; ty++) for (let tx = 0; tx <= 16 - sz; tx++) {
       if (ty < 16 && ty + sz > 16) continue; if (ty + sz > 32) continue;
       let ok = true;
       for (let j = 0; j < sz && ok; j++) for (let i = 0; i < sz; i++) if (occ[(ty + j) * 16 + tx + i]) { ok = false; break; }
@@ -673,8 +699,8 @@ function buildSprites() {
     }
     throw new Error('folha de sprites cheia');
   }
-  function put(name, img, pal) {
-    const sz = img.w / 8, { tx, ty } = alloc(sz);
+  function put(name, img, pal, minTy = 0) {
+    const sz = img.w / 8, { tx, ty } = alloc(sz, minTy);
     for (let j = 0; j < img.h; j++) for (let i = 0; i < img.w; i++) { const c = img.get(i, j); if (c) sheet.set(tx * 8 + i, ty * 8 + j, (pal << 4) | c); }
     ids[name] = ty * 16 + tx; return ids[name];
   }
@@ -702,6 +728,8 @@ function buildSprites() {
   '0123456789+$'.split('').forEach((ch, i) => put('DIG_' + (ch === '+' ? 'MAIS' : ch === '$' ? 'RS' : ch), digito(ch), 0));
   for (let s = 0; s < 3; s++) put(`PASTEL_${s}`, pastel(s), 1);
   for (const n of ['fumaca', 'brilho', 'fogo']) put(n.toUpperCase(), pastelFx(n), 1);
+  // botoes do texto: a partir da linha 6 (tiles 96+), que as cartas e a loja nao sobrescrevem
+  for (const b of BOTOES) put('BTN8_' + b, botao8(b), 0, 6);
   // barras: precisa de 27 tiles 8x8 consecutivos -> aloca 2 linhas inteiras
   let barBase = -1;
   for (let ty = 31; ty >= 16 && barBase < 0; ty--) {
