@@ -131,8 +131,8 @@ The generator modules:
 - `gerador/logo.py` converts whichever root-level PNG has "pastelles" in its filename into the 15-color title logo.
 
 ### ROM layout
-`src/snes.cfg` maps LoROM SlowROM with 32 banks of 32 KB (1 MB). The header in `main.s` says 1 MB and 2 KB of battery SRAM.
-- `src/main.s` is the single translation unit. It `.include`s `macros.inc`, `gen/assets.inc`, `vars.inc`, then `audio.s`, `game.s`, `telas.s`, `extra.s`, `segredo.s` and `ui.s` (all in the `CODE` segment, bank 0), then the data. Graphics go in the `BANK1`–`BANK12` segments, roughly one scene group per bank. The banks are 32 KB, so watch for overflow when art grows.
+`src/snes.cfg` maps LoROM SlowROM with 32 banks of 32 KB (1 MB). The header in `main.s` says 1 MB and 2 KB of battery SRAM. Banks 13 and up hold the recorded audio (`gen/sons.inc`, generated; currently up to bank 27).
+- `src/main.s` is the single translation unit. It `.include`s `macros.inc`, `gen/assets.inc`, `vars.inc`, then `audio.s`, `voz.s`, `game.s`, `telas.s`, `extra.s`, `segredo.s` and `ui.s` (all in the `CODE` segment, bank 0), then the data. Graphics go in the `BANK1`–`BANK12` segments, roughly one scene group per bank. The banks are 32 KB, so watch for overflow when art grows.
 - Register convention: **A is 8-bit, X/Y are 16-bit, DBR = $80, D = $0000**. Switch widths with the `A8`/`A16`/`I8`/`I16` macros so that the assembler's `.a8`/`.a16` tracking stays correct.
 - `gerador/checa_largura.py` runs on every build and flags branches or jumps whose target label was assembled under a different accumulator width. Treat its "problemas: N>0" output as a real bug.
 

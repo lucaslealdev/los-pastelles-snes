@@ -211,6 +211,31 @@ OAM_PILL   = 4 * (128 - PILL_SLOTS)
 OAM_BTN    = OAM_PILL - 4 * BTN_SLOTS   ; AddSprite nao passa daqui
 btn_tab:    .res BTN_SLOTS * 4      ; [posicao no bg3_buf (2), glifo (1; 0 = livre), -]
 btn_tpos:   .res 2
+; vozes gravadas (src/voz.s)
+vz_cur:     .res 1      ; voz tocando ($FF = nenhuma)
+vz_carga:   .res 2      ; trios das vozes fixas que faltam carregar (boot)
+vz_pri:     .res 1
+vz_est:     .res 1      ; stream: 0 parado, 1 enchendo o anel, 2 tocando
+vz_resto:   .res 2      ; fixa: quadros que faltam
+vz_resta:   .res 3      ; stream: bytes da fonte que faltam
+vz_fim:     .res 1      ; a fonte acabou (manda silencio)
+vz_sil:     .res 2      ; bytes de silencio ja mandados depois do fim
+vz_nivel:   .res 3      ; bytes no anel ainda nao tocados (16.8)
+vz_cauda:   .res 3      ; o que faltava tocar quando a fonte acabou (16.8)
+vz_bpq:     .res 2      ; bytes tocados por quadro (8.8)
+vz_folga:   .res 2      ; bytes a manter no anel
+vz_anel:    .res 2      ; posicao de escrita no anel
+vz_tri:     .res 3
+vz_tmp:     .res 1
+vz_tmp2:    .res 2
+vz_ultima:  .res VOZ_N * 2   ; quadro em que cada voz tocou (para nao repetir)
+vz_modo:    .res 1
+tema_pend:  .res 1      ; titulo: musica + narracao quando a carga das vozes acabar
+apu_endx:   .res 1      ; ENDX lido no quadro
+mu_est:     .res 1      ; musica gravada: 0 parada, 1 enchendo, 2 tocando
+mu_resta:   .res 3
+mu_nivel:   .res 3
+mu_anel:    .res 2
 btn_tcode:  .res 1
 ; pilula do rodape (Footer em ui.s)
 ft_on:      .res 1

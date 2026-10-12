@@ -108,6 +108,7 @@ tmp_note:   .res 1
 tmp_vreg:   .res 1
 tmp_pitch:  .res 2
 apu_cnt:    .res 1
+apu_ult:    .res 1      ; ultimo valor enviado na porta 0 (espera o eco dele)
 kon_pend:   .res 1
 kof_pend:   .res 1
 cur_song:   .res 1
@@ -117,6 +118,13 @@ sizzle_want:.res 1
 lag_count:  .res 2
 dim_on:     .res 1
 tw_ptr:     .res 3      ; texto letra por letra (ponteiro longo)
+vz_ptr:     .res 3      ; falas: ponteiro longo na ROM (src/voz.s)
+mu_ptr:     .res 3      ; musica gravada: ponteiro longo na ROM
+lt_b0:      .res 1      ; lote do stream (src/voz.s)
+lt_b1:      .res 1
+lt_b2:      .res 1
+lt_n:       .res 2
+lt_ant:     .res 2
 
 .segment "BSS"
 oam_buf:    .res 544
@@ -494,7 +502,8 @@ WaitFrame:
     .i16
     lda #1
     sta nmi_ready
-@w: lda nmi_ready
+@w: jsr Bomba               ; tempo ocioso: alimenta os streams (falas e musica)
+    lda nmi_ready
     bne @w
     rts
 
@@ -912,6 +921,7 @@ LoadBasePalettes:
     rts
 
 .include "src/audio.s"
+.include "src/voz.s"
 .include "src/game.s"
 .include "src/telas.s"
 .include "src/extra.s"
@@ -946,6 +956,7 @@ IconGfx:    .incbin "gen/icon_tiles.bin"
 IconGfx_end:
 IconPal:    .incbin "gen/icon_pal.bin"
 .include "gen/icon_pal.inc"
+.include "gen/voz.inc"         ; tabelas das vozes (acesso longo, f:)
 .segment "BANK11"
 .include "gen/cards.inc"
 
@@ -1055,6 +1066,9 @@ Shop4_2Tiles: .incbin "gen/shop4_2_tiles.bin"
 Shop4_2Tiles_end:
 Shop4_2Map:   .incbin "gen/shop4_2_map.bin"
 Shop4_2Pal:   .incbin "gen/shop4_2_pal.bin"
+
+; vozes e musica gravadas (bancos 13+)
+.include "gen/sons.inc"
 
 ; ---------------------------------------------------------------- cabecalho
 .segment "HEADER"

@@ -22,6 +22,7 @@ Requer Node.js, Python com Pillow e duas ferramentas que não acompanham o repos
 - [Mesen 2](https://www.mesen.ca/) em `tools/mesen` para jogar e em `teste/mesen` para os testes automáticos.
 
 Depois é só rodar `node build.js` (sem `tools/cc65`, o build usa o `ca65`/`ld65` do PATH).
+As vozes e a música (`sounds/*.mp3`) já vão convertidas para BRR em `arte_fonte/brr/`; o [ffmpeg](https://ffmpeg.org/) só é necessário ao trocar ou incluir um áudio.
 Para lançar uma versão, suba o número no arquivo `VERSION`: ao chegar na `main` e passar nos testes, o release sai sozinho (ver `CLAUDE.md`).
 
 Os ícones dos menus vêm do [Twemoji](https://github.com/twitter/twemoji) (CC-BY 4.0).

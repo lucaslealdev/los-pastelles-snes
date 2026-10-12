@@ -47,21 +47,11 @@ DayInit:
     jsr DrawHud
     jsr DayDraw
     jsr ScreenOn
-    lda d_boss
-    cmp #$FF
-    beq :+
-    lda #SONG_CHEFE
-    bra :+++
-:   ldx #0
-    lda s_boss
-    beq :+
-    inx
-    cmp #3
-    bcc :+
-    inx
-:   lda DaySongs,x
-:   jsr PlaySong
+    jsr StopMusic           ; expediente: musica gravada (no lugar do chiptune)
+    jsr MusToca
     jsr FadeIn
+    lda #VOZ_BOMDIA
+    jsr VozToca
     ldx #TXT_M_BEMVINDO
     jsr ShowMsg
     rts
@@ -313,7 +303,6 @@ SetupDay:
     sta d_goal
 :   rts
 
-DaySongs:    .byte SONG_DIA, SONG_DIA2, SONG_DIA3
 FrySpeed:    .word 96, 112, 136
 ; paciencia base: facil / normal / dificil (65536/taxa = quadros de espera)
 PatBase:     .word 28, 40, 56
@@ -806,6 +795,8 @@ DayMission:
     pla
     cmp s_mission
     beq :+
+    lda #VOZ_MISSAO
+    jsr VozToca
     ldx #TXT_M_MISSAO
     jsr ShowMsg
     SFX SFX_NIVEL
@@ -856,7 +847,9 @@ DayClock:
     beq :+
     stz f_state,x
     inc d_waste
-:   ldx #TXT_M_QUEBROU
+:   lda #VOZ_QUEBROU
+    jsr VozToca
+    ldx #TXT_M_QUEBROU
     jsr ShowMsgBad
     SFX SFX_ALARME
 @nob:
@@ -867,6 +860,8 @@ DayClock:
     bcc @rts
     lda #1
     sta d_closed
+    lda #VOZ_PORHOJE
+    jsr VozToca
     ldx #TXT_M_FECHOU
     jsr ShowMsg
     SFX SFX_SINO
@@ -980,6 +975,8 @@ DayInput:
     bne @nx
     lda #1
     sta hold_soda
+    lda #VOZ_REFRI
+    jsr VozToca
     ldx #TXT_M_REFRI
     jsr ShowMsg
     SFX SFX_PEGAR
@@ -1300,7 +1297,9 @@ MiniGame:
     jsr ShowMsg
     SFX SFX_OK
     rts
-:   ldx #TXT_M_FECHADO
+:   lda #VOZ_FECHOU
+    jsr VozToca
+    ldx #TXT_M_FECHADO
     jsr ShowMsg
     lda mg_flav
     jmp PutInFryer
@@ -1320,6 +1319,8 @@ MiniGame:
     A8
 :
     inc d_waste
+    lda #VOZ_ABRIU
+    jsr VozToca
     ldx #TXT_M_ABRIU
     jsr ShowMsgBad
     SFX SFX_LIXO
@@ -1525,6 +1526,8 @@ TakeFromBasket:
     beq @ruim
     cmp #Q_QUEIM
     beq @ruim
+    lda #VOZ_OLHA
+    jsr VozToca
     jsr AutoTarget
     bcs :+
     jsr DvWants
@@ -1535,6 +1538,15 @@ TakeFromBasket:
     jsr ShowMsg
 :   rts
 @ruim:
+    lda hold_q              ; cru ou queimado
+    cmp #Q_CRU
+    bne @queim
+    lda #VOZ_CRU
+    bra @fala
+@queim:
+    lda #VOZ_QUEIMOU
+@fala:
+    jsr VozToca
     ldx #TXT_M_RUIM
     jmp ShowMsgBad
 
@@ -1662,6 +1674,8 @@ ServeCustomer:
     A8
     lda #1
     jsr RepDown
+    lda #VOZ_ESSENAO
+    jsr VozToca
     ldx #TXT_M_ERRADO
     jsr ShowMsgBad
     SFX SFX_ERRO
@@ -1831,6 +1845,8 @@ ServeCustomer:
     jsr ShowMsg
     bra @tip
 @nomyst:
+    lda #VOZ_TOP
+    jsr VozToca
     ldx #TXT_M_PERF
     jsr ShowMsg
     bra @tip
@@ -2496,6 +2512,8 @@ CustUpdate:
     sta c_timer,x
     lda #3
     jsr RepDown
+    lda #VOZ_DESISTIU
+    jsr VozToca
     ldx #TXT_M_FOI
     jsr ShowMsgBad
     SFX SFX_BRAVO
@@ -3135,6 +3153,8 @@ YAction:
     jsr DvCreate
     ldx #0
     stx ph_ring
+    lda #VOZ_TELEFONE
+    jsr VozToca
     ldx #TXT_M_ATENDEU
     jsr ShowMsg
     SFX SFX_OK

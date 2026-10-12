@@ -130,9 +130,45 @@ const TEXTPAL = [
 w('text_pal.bin', Buffer.concat(TEXTPAL.map((p) => palBytes(p).slice(0, 8))));
 
 // ------------------------------------------------------------ audio
-const spc = AU.spcBlob();
+// vozes gravadas (gerador/sons.js): fixas na memoria do SPC700, o resto em stream da ROM
+const SO = require('./gerador/sons').sons(AU.ARAM.FIXAS_FIM - AU.ARAM.FIXAS);
+const FPS = 60.0988;                                     // quadros por segundo (NTSC)
+const pitch = (taxa) => Math.round(taxa * 4096 / 32000);
+const flagFim = (brr, f) => { const b = Buffer.from(brr); b[b.length - 9] |= f; return b; };
+// memoria do SPC700: chiado (loop) e vozes fixas a partir de $0400
+const extras = [{ inicio: AU.ARAM.MUSICA, loop: AU.ARAM.MUSICA }];   // SRCN 3
+const fixasBin = [];
+let aram = AU.ARAM.FIXAS;
+for (const [brr, flag] of [[SO.fritura, 3], ...SO.fixas.map((v) => [v.brr, 1])]) {
+  extras.push({ inicio: aram, loop: aram });
+  // extras[i] e o SRCN 3+i: depois do chiado (SRCN 4) vem o anel das falas (SRCN 5)
+  if (3 + extras.length === AU.SRCN.FALA) extras.push({ inicio: AU.ARAM.FALA, loop: AU.ARAM.FALA });
+  fixasBin.push(flagFim(brr, flag));
+  aram += brr.length;
+}
+if (aram > AU.ARAM.FIXAS_FIM) throw new Error('vozes fixas passam da memoria do SPC700');
+let fixas = Buffer.concat(fixasBin);
+fixas = Buffer.concat([fixas, Buffer.alloc((3 - fixas.length % 3) % 3)]);
+console.log(`vozes fixas: ${SO.fixas.length} + chiado a ${SO.taxaFixas} Hz, ${fixas.length} bytes ($${AU.ARAM.FIXAS.toString(16)}-$${aram.toString(16)})`);
+if (extras[AU.SRCN.MUSICA - 3].inicio !== AU.ARAM.MUSICA || extras[AU.SRCN.FALA - 3].inicio !== AU.ARAM.FALA ||
+    extras.length !== AU.SRCN.FIXA0 - 3 + SO.fixas.length) throw new Error('diretorio de samples fora de ordem');
+const spc = AU.spcBlob(extras);
 w('spc.bin', spc);
 const music = AU.musicData();
+// ROM: vozes fixas (carga no boot) + streams, em sequencia a partir do banco SONS_BANCO
+const SONS_BANCO = 13, partes = [fixas];
+let ofs = fixas.length;
+const streams = SO.streams.map((v) => { const o = ofs; partes.push(v.brr); ofs += v.brr.length; return { ...v, ofs: o }; });
+const sonsBin = Buffer.concat(partes);
+w('sons.bin', sonsBin);
+const romEnd = (o) => '$' + ((SONS_BANCO + (o >> 15)) * 0x10000 + 0x8000 + (o & 0x7FFF)).toString(16).toUpperCase().padStart(6, '0');
+const sonsInc = ['; gerado por build.js - vozes e musica gravadas (BRR), um pedaco por banco'];
+for (let o = 0, b = SONS_BANCO; o < sonsBin.length; o += 0x8000, b++) {
+  if (b > 31) throw new Error('sons passam do fim da ROM (1 MB)');
+  sonsInc.push(`.segment "BANK${b}"`, `  .incbin "gen/sons.bin", ${o}, ${Math.min(0x8000, sonsBin.length - o)}`);
+}
+w('sons.inc', sonsInc.join('\n') + '\n');
+console.log(`sons na ROM: ${sonsBin.length} bytes (bancos ${SONS_BANCO}-${SONS_BANCO + ((sonsBin.length - 1) >> 15)})`);
 
 // ------------------------------------------------------------ includes
 const inc = [];
@@ -145,6 +181,30 @@ inc.push(`FONT_ARROW = ${hex2(F.CODE['▶'])}`);
 inc.push(`FONT_COLON = ${hex2(F.CODE[':'])}`);
 inc.push(`FONT_BTN0 = ${hex2(F.FONT_BTN0)}`, `N_BTN = ${F.BOTOES.length}`);
 inc.push(`SPC_SIZE = ${spc.length}`);
+{
+  const V = [...SO.fixas, ...streams];
+  V.forEach((v, i) => inc.push(`VOZ_${v.id} = ${i}`));
+  inc.push(`VOZ_N = ${V.length}`, `MUSICA_ARAM = ${hex4(AU.ARAM.MUSICA)}`, `MUSICA_LEN = ${AU.ARAM.MUSICA_LEN}`,
+    `FALA_ARAM = ${hex4(AU.ARAM.FALA)}`, `FALA_LEN = ${AU.ARAM.FALA_LEN}`, `SRCN_MUSICA = ${AU.SRCN.MUSICA}`, `SRCN_FALA = ${AU.SRCN.FALA}`, `SRCN_FRITURA = ${AU.SRCN.FRITURA}`, `FRITURA_PITCH = ${hex4(pitch(SO.taxaFixas))}`,
+    `FIXAS_ARAM = ${hex4(AU.ARAM.FIXAS)}`, `FIXAS_LEN = ${fixas.length}`, `FIXAS_ROM = ${romEnd(0)}`);
+  const tab = ['; gerado por build.js - tabelas das vozes (gerador/sons.js)'];
+  const col = (nome, dir, fn) => tab.push(`${nome}: ${dir} ` + V.map(fn).join(', '));
+  col('VozTipo', '.byte', (v) => (v.tipo === 'fixa' ? 0 : v.tipo === 'musica' ? 2 : 1));
+  col('VozPri', '.byte', (v) => v.pri);
+  col('VozEspera', '.word', (v) => Math.round(v.espera * FPS));
+  col('VozSrcn', '.byte', (v, i) => (v.tipo === 'fixa' ? AU.SRCN.FIXA0 + i : v.tipo === 'musica' ? AU.SRCN.MUSICA : AU.SRCN.FALA));
+  col('VozPitch', '.word', (v) => hex4(pitch(v.taxa)));
+  col('VozQuadros', '.word', (v) => Math.ceil((v.brr.length / 9) * 16 / v.taxa * FPS) + 2);
+  col('VozRom', '.faraddr', (v) => (v.tipo === 'fixa' ? '0' : romEnd(v.ofs)));
+  col('VozLen', '.faraddr', (v) => (v.tipo === 'fixa' ? 0 : v.brr.length));
+  col('VozBpq', '.word', (v) => Math.round(v.taxa * 9 / 16 / FPS * 256));          // bytes por quadro (8.8)
+  col('VozFolga', '.word', (v) => Math.round(v.taxa * 9 / 16 * (v.tipo === 'musica' ? 0.5 : 0.15) / 3) * 3); // folga no anel
+  // cartas que falam (CARD_* -> VOZ_* ou $FF)
+  const CV = { BOSS_0: 'DESAFIO', BOSS_1: 'DESAFIO', BOSS_2: 'DESAFIO', BOSS_3: 'DESAFIO', DUELO: 'DESAFIO',
+    VITORIA: 'VITORIA', DUELO_OK: 'VITORIA', DERROTA: 'DERROTA', DUELO_NO: 'DERROTA', FIM: 'IMPERIO' };
+  tab.push('CartaVoz: .byte ' + Object.keys(CARDS).map((k) => (/^TROF_/.test(k) ? 'VOZ_TROFEU' : CV[k] ? 'VOZ_' + CV[k] : '$FF')).join(', '));
+  w('voz.inc', tab.join('\n') + '\n');
+}
 inc.push(`MENU_CHK_VRAM = ${hex4(MENU_CHK_TILE * 16)}`);
 inc.push(`TUT_VRAM = ${hex4(TUT_TILE * 16)}`);
 inc.push(`SP_VER_COL = ${(32 - [...VERSAO_TXT].length) >> 1}`);

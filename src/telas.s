@@ -90,9 +90,12 @@ TitleInit:
     jsr TitleMenu
     jsr TitleSprites
     jsr ScreenOn
-    lda #SONG_TITULO
-    jsr PlaySong
-    jsr FadeIn
+    lda mu_est              ; a musica gravada ja esta tocando (voltou ao titulo)
+    bne :+
+    jsr StopMusic           ; o titulo usa a musica gravada (no lugar do chiptune)
+    lda #1                  ; musica e narracao entram assim que as vozes fixas
+    sta tema_pend           ; terminarem de carregar (TitleUpdate), sem travar a tela
+:   jsr FadeIn
     rts
 
 TitleMenu:
@@ -120,7 +123,15 @@ TitleCount:
 TitleUpdate:
     .a8
     .i16
-    jsr TitleSprites
+    lda tema_pend           ; carga das vozes fixas acabou: musica + narracao
+    beq :+
+    ldx vz_carga
+    bne :+
+    stz tema_pend
+    jsr MusToca
+    lda #VOZ_TITULO         ; "Los Pastelles, o imperio do pastel" por cima da musica
+    jsr VozToca
+:   jsr TitleSprites
     jsr CodeCheck
     bcc :+
     SFX SFX_NIVEL
@@ -365,6 +376,26 @@ CardInit:
 :   jsr FadeIn
     rts
 
+; carta com fala (desafio, vitoria, derrota, trofeu, final): toca a voz
+CartaFala:
+    .a8
+    .i16
+    A16
+    lda card_i
+    and #$00FF
+    tax
+    A8
+    lda card_q,x
+    A16
+    and #$00FF
+    tax
+    A8
+    lda f:CartaVoz,x
+    cmp #$FF
+    beq :+
+    jmp VozToca
+:   rts
+
 ; ponteiro da carta atual -> tmp (indice na CardTable)
 CardEntry:
     .a8
@@ -390,6 +421,7 @@ DrawCard:
     .a8
     .i16
     jsr ClearBg3
+    jsr CartaFala
     jsr CardEntry
     lda f:CardTable,x
     cmp #$FF

@@ -2,7 +2,7 @@
 
 Desenvolvido por **Ramon de Oliveira** — loja: [www.lospastelles.com.br](https://www.lospastelles.com.br)
 
-**`LosPastelles.sfc`** é uma ROM real de SNES (LoROM, 1 MB, 2 KB de SRAM com bateria).
+**`LosPastelles.sfc`** é uma ROM real de SNES (LoROM, 1 MB, 2 KB de SRAM com bateria), com vozes e música gravadas.
 Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FXPAK etc.).
 
 ## Como jogar
@@ -38,7 +38,8 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 - 5 capítulos e 4 desafios: Hora do Almoço, Desafio do Sabor, Cozinha em Crise, Expansão Nacional.
 - 15 missões, níveis/XP, reputação, eventos (feira, promoção do concorrente).
 - Mapa da expansão; final ao chegar a 10 unidades (lojas + franquias).
-- Música chiptune (título, expediente, desafio, resultado, vitória, derrota) e efeitos sonoros.
+- Música-tema gravada na tela de título (com a narração "Los Pastelles, o império do pastel") e durante o expediente; música chiptune nas outras telas (abertura, resultado, vitória, derrota) e efeitos sonoros.
+- Vozes gravadas: o pastel fechou, abriu, cru, queimou, "olha o pastel!", "top demais", sabor errado, combo com refri, cliente desistindo, telefone, cesto quebrado, "bom dia, freguesia!", "por hoje é só", missão cumprida, troféu, desafio, vitória, derrota e o final. Chiado da fritura gravado.
 
 ## Recompilar
 Requer Node.js e Python com Pillow. `node build.js` gera a arte, a fonte, os textos, a música e
