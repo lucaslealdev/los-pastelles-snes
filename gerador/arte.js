@@ -256,10 +256,7 @@ const PAL_MENU = [null, '#1C0A04', '#FFF8EC', '#F3DFC0', '#C8A870', '#E88607', '
 function menuScene() {
   const K = 1, C1 = 2, C2 = 3, C3 = 4, R = 5, W = 6, r = 7, B = 8, D = 9, Y = 10;
   const I = new Img(256, 224);
-  for (let y = 0; y < 224; y++) for (let x = 0; x < 256; x++) {
-    const a = (x >> 4) & 1, b = (y >> 4) & 1;
-    I.set(x, y, a && b ? R : (a || b ? ((x + y) & 1 ? R : W) : W));
-  }
+  // fundo transparente: o xadrez fica no BG2 (menuChecker), que rola sozinho
   // painel
   I.rect(10, 10, 240, 206, r);            // sombra
   I.rect(6, 6, 240, 206, K);
@@ -267,6 +264,23 @@ function menuScene() {
   // cantos decorados
   for (const [x, y] of [[14, 14], [234, 14], [14, 200], [234, 200]]) { I.rect(x, y, 6, 6, Y); I.frame(x, y, 6, 6, C3); }
   return I;
+}
+
+// xadrez do fundo dos menus (BG2): 3 tiles (creme, laranja, pontilhado) e mapa 32x32
+// que se repete a cada 4 tiles, para rolar na horizontal sem emenda.
+// tileBase = indice do 1o tile na VRAM; paleta 2 (a mesma do menu)
+function menuChecker(tileBase) {
+  const R = 5, W = 6;
+  const solid = (c) => new Array(64).fill(c);
+  const dither = Array.from({ length: 64 }, (_, k) => (((k & 7) + (k >> 3)) & 1) ? R : W);
+  const tiles = Buffer.concat([solid(W), solid(R), dither].map(enc4));
+  const map = Buffer.alloc(2048);
+  for (let ty = 0; ty < 32; ty++) for (let tx = 0; tx < 32; tx++) {
+    const a = (tx >> 1) & 1, b = (ty >> 1) & 1;
+    const t = a && b ? 1 : (a || b ? 2 : 0);
+    map.writeUInt16LE((tileBase + t) | (2 << 10), (ty * 32 + tx) * 2);
+  }
+  return { tiles, map };
 }
 
 // =================================================================== CENARIO: MAPA
@@ -711,6 +725,6 @@ function buildSprites() {
 }
 
 module.exports = {
-  shopScene, shopPal, titleScene, menuScene, mapScene, buildSprites, sceneToBG, palBytes,
+  shopScene, shopPal, titleScene, menuScene, menuChecker, mapScene, buildSprites, sceneToBG, palBytes,
   PAL_SHOP, PAL_TITLE, PAL_MENU, PAL_MAP,
 };

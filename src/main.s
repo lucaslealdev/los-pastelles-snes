@@ -18,6 +18,8 @@ BG12NBA  = $210B
 BG34NBA  = $210C
 BG1HOFS  = $210D
 BG1VOFS  = $210E
+BG2HOFS  = $210F
+BG2VOFS  = $2110
 BG3HOFS  = $2111
 BG3VOFS  = $2112
 VMAIN    = $2115
@@ -46,6 +48,7 @@ VRAM_BG1TILES = $0000
 VRAM_BG3TILES = $4000
 VRAM_BG1MAP   = $5000
 VRAM_BG3MAP   = $5400
+VRAM_BG2MAP   = $5800   ; xadrez dos menus
 VRAM_OBJ      = $6000
 
 ; botoes (byte alto de pad)
@@ -186,6 +189,8 @@ FastReset:
     sta BG1SC
     lda #(VRAM_BG3MAP >> 8)
     sta BG3SC
+    lda #(VRAM_BG2MAP >> 8)
+    sta BG2SC
     lda #(VRAM_BG1TILES >> 12)
     sta BG12NBA
     lda #(VRAM_BG3TILES >> 12)
@@ -942,6 +947,9 @@ MenuTiles_end:
     .i16
 MenuMap:    .incbin "gen/menu_map.bin"
 MenuPal:    .incbin "gen/menu_pal.bin"
+MenuChkTiles: .incbin "gen/menu_chk_tiles.bin"
+MenuChkTiles_end:
+MenuChkMap:   .incbin "gen/menu_chk_map.bin"
 
 .segment "BANK3"
 TitleTiles: .incbin "gen/title_tiles.bin"

@@ -5,6 +5,7 @@
 ;  - caixa que abre com efeito elastico (rolagem vertical por linha)
 ;  - faixas do HUD do expediente com brilho de vidro
 ;  - texto que aparece letra por letra (maquina de escrever)
+;  - xadrez do fundo (BG2) rolando para a direita sem parar
 ; Canais: 7 = COLDATA, 6 = BG1VOFS, 5 = BG3VOFS (o canal 0 fica com o DMA comum)
 
 HDMAEN   = $420C
@@ -92,6 +93,25 @@ UiMarkX:
 UiNmi:
     .a8
     .i16
+    lda ui_mode
+    cmp #UI_PANEL
+    bne @nochk
+    ; xadrez do BG2: anda 1 pixel para a direita a cada 2 quadros (HOFS = -quadro/2)
+    A16
+    lda frame
+    lsr a
+    eor #$FFFF
+    inc a
+    A8
+    sta BG2HOFS
+    xba
+    and #$03
+    sta BG2HOFS
+    lda #$FF
+    sta BG2VOFS
+    lda #$03
+    sta BG2VOFS
+@nochk:
     lda ui_open
     beq @normal
     lda bright
@@ -122,7 +142,7 @@ UiNmi:
     sta $4361
     lda #$60
     sta HDMAEN
-    lda #$05               ; BG1 + BG3 (sprites aparecem quando a caixa abre)
+    lda #$07               ; BG1 + BG2 + BG3 (sprites aparecem quando a caixa abre)
     sta TM
     lda #$30
     sta CGWSEL
@@ -155,7 +175,9 @@ UiNmi:
     stz CGADSUB
     rts
 @panel:
-    ; subtrai cor no BG1 e no fundo, so dentro do painel (janela 1)
+    lda #$17               ; BG1 + BG2 (xadrez) + BG3 + sprites
+    sta TM
+    ; subtrai cor no BG1, BG2 e no fundo, so dentro do painel (janela 1)
     lda #$20
     sta WOBJSEL
     lda #14
@@ -164,7 +186,7 @@ UiNmi:
     sta WH1
     lda #$10
     sta CGWSEL
-    lda #$A1
+    lda #$A3
     sta CGADSUB
     lda #$20               ; vermelho = 0 (o HDMA escreve verde e azul)
     sta COLDATA

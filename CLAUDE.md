@@ -39,6 +39,12 @@ teste/mesen/Mesen.exe --testrunner LosPastelles.sfc teste/bot.lua
 - The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
 - Each Lua script finds `teste/` from its own path via `debug.getinfo`. If Mesen doesn't expose `debug`, it falls back to the relative path `teste/`, so launch Mesen from the repo root. Other paths are built from that directory (`dir .. "../gen/labels.txt"`).
 - Outputs (`teste/*.png`, `teste/*.txt`) are gitignored.
+- Running Mesen 2 (Linux x64 build 2.1.1) here:
+  - It crashes with `std::bad_cast` (a libstdc++ conflict inside MesenCore). Work around it with `LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 teste/mesen/Mesen --testrunner ...`.
+  - A `settings.json` next to the binary puts it in portable mode, so configs and saves stay in `teste/mesen/`.
+  - That file must have `Debug.ScriptWindow.AllowIoOsAccess: true`, or the scripts can't use `io` and can't save screenshots.
+  - It must also have `Snes.Port1.Type: "SnesController"`, or `emu.setInput` is ignored.
+  - Press a button for a few polls in a row so the game sees it.
 
 ## Architecture
 
@@ -62,6 +68,13 @@ The generator modules:
 - `src/main.s` is the single translation unit. It `.include`s `macros.inc`, `gen/assets.inc`, `vars.inc`, then `audio.s`, `game.s`, `telas.s`, `extra.s`, `segredo.s` and `ui.s` (all in the `CODE` segment, bank 0), then the data. Graphics go in the `BANK1`–`BANK12` segments, roughly one scene group per bank. The banks are 32 KB, so watch for overflow when art grows.
 - Register convention: **A is 8-bit, X/Y are 16-bit, DBR = $80, D = $0000**. Switch widths with the `A8`/`A16`/`I8`/`I16` macros so that the assembler's `.a8`/`.a16` tracking stays correct.
 - `gerador/checa_largura.py` runs on every build and flags branches or jumps whose target label was assembled under a different accumulator width. Treat its "problemas: N>0" output as a real bug.
+
+### Menu background (BG2)
+Menu screens (`LoadMenuScene`) show a 2-layer background:
+- BG1 holds the panel. Outside the panel it is transparent.
+- BG2 holds the checker pattern (`menuChecker` in `arte.js`): 3 tiles at tile index 1021 (`MENU_CHK_VRAM`) and a map at `VRAM_BG2MAP` = $5800.
+
+`UiNmi` scrolls BG2 1 px to the right every 2 frames and turns BG2 on in `TM` only while `ui_mode == UI_PANEL`. Every other scene uses BG1 only.
 
 ### Game loop and state machine
 `MainLoop` in `main.s` dispatches through the `StateInit`/`StateUpdate` jump tables (`src/telas.s`), indexed by `state`. The `ST_*` constants are defined at the top of `src/game.s` (title, intro, card, preday, day, results, shop, map, options, choose, slots, splash, trophies, secret). To change screens, write to `next_state`. The main loop runs the new state's Init once, then calls Update every frame, followed by `UiUpdate`, `AudioUpdate`, `WaitFrame` and `ReadPad`. NMI uploads OAM, palettes and VRAM from RAM buffers.

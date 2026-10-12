@@ -34,6 +34,11 @@ logoImg.p.set(fs.readFileSync(logoIdx));
 const logoPal = [null, ...JSON.parse(fs.readFileSync(logoPalFile, 'utf8')).cores];
 
 // ------------------------------------------------------------ cenarios
+// xadrez animado dos menus (BG2): tiles no fim da area do BG1, que o menu nao usa
+const MENU_CHK_TILE = 1021;
+const CHK = A.menuChecker(MENU_CHK_TILE);
+w('menu_chk_tiles.bin', CHK.tiles); w('menu_chk_map.bin', CHK.map);
+
 const scenes = {
   logo: [logoImg, logoPal, null],
   shop0_0: [A.shopScene(0, 0), A.shopPal(0), (tx, ty) => ty >= 13 && ty <= 15],
@@ -57,6 +62,7 @@ const scenes = {
 };
 for (const [name, [img, pal, prio]] of Object.entries(scenes)) {
   const bg = A.sceneToBG(img, 2, prio);
+  if (name === 'menu' && bg.count > MENU_CHK_TILE) throw new Error('menu: tiles demais, invadem o xadrez do BG2');
   w(`${name}_tiles.bin`, bg.tiles); w(`${name}_map.bin`, bg.map); w(`${name}_pal.bin`, palBytes(pal));
   console.log(`cenario ${name}: ${bg.count} tiles`);
 }
@@ -111,6 +117,7 @@ inc.push(`FONT_BOX = ${hex2(F.FONT_BOX)}`);
 inc.push(`FONT_ARROW = ${hex2(F.CODE['▶'])}`);
 inc.push(`FONT_COLON = ${hex2(F.CODE[':'])}`);
 inc.push(`SPC_SIZE = ${spc.length}`);
+inc.push(`MENU_CHK_VRAM = ${hex4(MENU_CHK_TILE * 16)}`);
 inc.push(`UI_N_OPEN = ${UI.N_OPEN}`, `UI_TAB_LEN = ${UI.TAB_LEN}`);
 Object.keys(CARDS).forEach((k, i) => inc.push(`CARD_${k} = ${i}`));
 music.songs.forEach((s, i) => inc.push(`SONG_${s.name.toUpperCase()} = ${i}`));

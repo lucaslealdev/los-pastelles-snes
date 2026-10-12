@@ -19,6 +19,8 @@ LoadMenuScene:
     sta VMAIN
     VRAM_LOAD MenuTiles, VRAM_BG1TILES, (MenuTiles_end - MenuTiles)
     VRAM_LOAD MenuMap, VRAM_BG1MAP, 2048
+    VRAM_LOAD MenuChkTiles, MENU_CHK_VRAM, (MenuChkTiles_end - MenuChkTiles)
+    VRAM_LOAD MenuChkMap, VRAM_BG2MAP, 2048
     jsr LoadBasePalettes
     PAL_LOAD MenuPal, 32, 32
     jmp UiPanelOn
