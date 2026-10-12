@@ -6,7 +6,7 @@ Desenvolvido por **Ramon de Oliveira** — [www.lospastelles.com.br](https://www
 ![Capa do jogo](cartucho/capa_jogo.png)
 
 ## Jogar
-Baixe a ROM (`LosPastelles-<versão>.sfc`) da [versão mais recente](https://github.com/lucaslealdev/los-pastelles-snes/releases/latest)
+Baixe a ROM (`LosPastelles-<versão>.sfc`) da [versão mais recente](../../releases/latest)
 e abra num emulador de SNES (Mesen, bsnes, Snes9x) ou grave num cartucho flash (EverDrive, FXPAK).
 A versão aparece na tela de créditos. O [`LosPastelles.sfc`](LosPastelles.sfc) do repositório é a compilação de desenvolvimento.
 
