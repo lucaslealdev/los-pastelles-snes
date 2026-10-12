@@ -756,8 +756,10 @@ TutMathTab:
     .byte 1, $B5
     .byte 0
 
-; com o balao aberto, os sprites do jogo descem para a prioridade 2 (ficam atras
-; do balao, que e BG2 com prioridade alta); botoes e pilula seguem na frente
+; com o balao aberto: sprites do jogo inteiros dentro do balao somem (ja ficariam
+; cobertos, e contam no limite de sprites por linha, cortando botoes e pilula);
+; os que passam da borda descem para a prioridade 2 (atras do balao, que e BG2
+; com prioridade alta). Botoes e pilula seguem na frente.
 TutSprites:
     .a8
     .i16
@@ -768,9 +770,25 @@ TutSprites:
 :   ldx #0
 @l: cpx oam_idx            ; so os sprites que a tela usou
     bcs @r
+    ; dentro do balao? (supondo 16x16; o sprite aparece 1 linha abaixo do y)
+    lda oam_buf+1,x
+    cmp #(TUT_Y0-1)
+    bcc @atras
+    cmp #(TUT_Y0+TUT_H-16)
+    bcs @atras
+    lda oam_buf,x
+    cmp #TUT_X0
+    bcc @atras
+    cmp #(TUT_X1-14)
+    bcs @atras
+    lda #$F0
+    sta oam_buf+1,x
+    bra @nx
+@atras:
     lda oam_buf+3,x
     and #$EF
     sta oam_buf+3,x
+@nx:
     inx
     inx
     inx
