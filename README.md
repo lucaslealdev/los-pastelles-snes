@@ -10,7 +10,12 @@ Baixe a ROM (`LosPastelles-<versão>.sfc`) da [versão mais recente](../../relea
 e abra num emulador de SNES (Mesen, bsnes, Snes9x) ou grave num cartucho flash (EverDrive, FXPAK).
 A versão aparece na tela de créditos. O [`LosPastelles.sfc`](LosPastelles.sfc) do repositório é a compilação de desenvolvimento.
 
-![Tela do jogo](cartucho/fotos/foto_jogo.png) ![Loja](cartucho/fotos/foto_loja.png)
+| | | |
+|:---:|:---:|:---:|
+| ![Título](docs/telas/titulo.png)<br>Título | ![Opções](docs/telas/opcoes.png)<br>Opções | ![Mestre da Massa](docs/telas/carta.png)<br>História, com os botões do controle no texto |
+| ![Tutorial](docs/telas/tutorial.png)<br>Tutorial guiado | ![Expediente](docs/telas/dia.png)<br>Expediente (loja reformada) | ![Loja](docs/telas/loja.png)<br>Loja entre os dias |
+
+Com o título parado 30 segundos, começa uma demonstração em que a CPU joga um expediente.
 
 Controles, conteúdo, segredos e instruções para gravar no cartucho estão no [LEIAME.md](LEIAME.md).
 O manual está em [`cartucho/manual_los_pastelles.pdf`](cartucho/manual_los_pastelles.pdf) e o trailer em
