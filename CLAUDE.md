@@ -60,17 +60,18 @@ LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 teste/mesen/Mesen --testrunn
 
 ## Versioning and releases
 
-The project uses semantic versioning (`MAJOR.MINOR.PATCH`), starting at `0.0.1`. The version is computed by `gerador/versao.js` from two sources:
-- `VERSION`: the minimum version for the next release.
-- git tags `vX.Y.Z`: the versions already released.
+The project uses semantic versioning (`MAJOR.MINOR.PATCH`), starting at `0.0.1`. **A new version only happens when someone bumps `VERSION`.** A commit without that bump (docs, CI, refactoring…) is tested and built, but doesn't create a version or a release.
 
-`node gerador/versao.js --proxima` prints the next version to release:
-- If `VERSION` is higher than the latest tag, it uses `VERSION`.
-- Otherwise, it uses the latest tag with PATCH + 1.
+`gerador/versao.js` reads two sources:
+- `VERSION`: the current version of the game.
+- git tags `vX.Y.Z`: the versions already released, created by CI.
 
-The version of each build (`node gerador/versao.js`) is:
-- **In CI:** the `GAME_VERSION` env var, validated as semver.
-- **Locally:** `git describe` gives the latest tag plus the commits since it (e.g. `0.0.3-dev.2+abc1234`). With no tags, it's `VERSION` plus `-dev`.
+It has two commands:
+- `node gerador/versao.js --lancar` prints the version to release now: the one in `VERSION`, if it doesn't have a tag yet. Otherwise it prints nothing. If `VERSION` is below the latest tag, it's an error.
+- `node gerador/versao.js` prints the version of this build:
+  - `GAME_VERSION`, if set (CI sets it, and it's validated as semver);
+  - otherwise `git describe`, giving the latest tag plus the commits since it (e.g. `0.0.2-dev.3+abc1234`; exactly `0.0.2` on the tagged commit);
+  - with no git or no tags, `VERSION` plus `-dev`.
 
 `build.js` only writes the version as text in the credits card (`CARDS.CREDITOS`, line "VERSÃO …"). Nothing in the game logic, the save format or the ROM layout depends on it.
 - `versaoNaTela` keeps only characters that have a glyph and caps the text at 19 characters. If it's too long, the `+metadata` part is dropped first.
@@ -78,19 +79,21 @@ The version of each build (`node gerador/versao.js`) is:
 
 **CI** (`.github/workflows/ci.yml`, on `ubuntu-24.04`):
 - **Build job:**
-  - installs cc65, Pillow and SDL2 via apt, with Mesen 2.1.1 cached;
+  - installs cc65, Pillow and SDL2 via apt, with Mesen 2.1.1 cached, and clones the full history (for tags and `git describe`);
   - computes the version and compiles with `node build.js` (which includes the width checker);
   - runs `teste/ci.lua` headless;
   - uploads the ROM as an unzipped artifact (`archive: false`, `LosPastelles-<version>.sfc`, kept for 14 days).
-- **Push to `main`:** the version is the next one (e.g. `0.0.2`). The `release` job (the only one with `contents: write`) creates the `v<version>` tag on the commit and publishes the release with the ROM.
-  - Runs on `main` are queued, never in parallel, so two releases never compute the same version.
-- **Pull requests:** the version is `<next>-pr.<number>+<sha>`. The PR's ROM is the artifact of the run, linked in the run summary. A new push cancels the PR's previous run.
-- **Skipped changes:** changes only to `*.md`, `cartucho/`, `trailer/` or `.gitignore` don't run CI (and don't release).
+- **Push to `main` with a new `VERSION`** (no tag yet): the build uses that version, and the `release` job (the only one with `contents: write`) creates the `v<version>` tag on the commit and publishes the release with the ROM.
+- **Push to `main` without a `VERSION` change:** tests and an artifact with a `-dev` version, but no release.
+- **Pull requests:** the version is `<VERSION>-pr.<number>+<sha>`. The PR's ROM is the artifact of the run, linked in the run summary. A new push cancels the PR's previous run.
+- **Concurrency:** runs on `main` are queued, never in parallel.
+- **Skipped changes:** changes only to `*.md`, `cartucho/`, `trailer/` or `.gitignore` don't run CI.
 
-**How to cut a new version:**
-- **PATCH:** nothing to do. Every merge or push to `main` that passes the tests releases the next PATCH automatically (`0.0.1`, `0.0.2`, …).
-- **MINOR or MAJOR:** change `VERSION` (e.g. to `0.1.0` or `1.0.0`) in the same commit/PR as the change. The next release uses that version, and later ones continue from it (`0.1.1`, …). Never lower `VERSION` below the latest tag (it would be ignored).
-- To check what the next release will be: `git fetch --tags && node gerador/versao.js --proxima`.
+**How to release a new version:** bump `VERSION` in the commit/PR that should become the version, then push or merge to `main`. If the tests pass, the release comes out on its own.
+- **PATCH** (fixes): `0.0.2` → `0.0.3`.
+- **MINOR** (new features): `0.0.3` → `0.1.0`.
+- **MAJOR** (big changes or incompatible saves): `0.9.0` → `1.0.0`.
+- `VERSION` can never go below the latest tag; the build fails. To see what the next push would release: `git fetch --tags && node gerador/versao.js --lancar`.
 
 ## Architecture
 

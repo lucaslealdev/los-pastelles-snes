@@ -1,8 +1,10 @@
 // Versao do jogo (semantic versioning: MAIOR.MENOR.CORRECAO).
-//  - VERSION: versao minima da proxima versao lancada (mude para subir MAIOR/MENOR)
-//  - tags vX.Y.Z: versoes ja lancadas (o CI cria uma a cada mudanca na main)
-// Uso: node gerador/versao.js            -> versao desta compilacao
-//      node gerador/versao.js --proxima  -> proxima versao a lancar (usado pelo CI)
+//  - VERSION: a versao atual do jogo. Lancar uma versao = subir este numero.
+//  - tags vX.Y.Z: versoes ja lancadas (o CI cria a tag quando o VERSION sobe)
+// Commits sem mudanca no VERSION nao geram versao nova: compilam como
+// "<ultima versao>-dev.<commits desde ela>+<commit>".
+// Uso: node gerador/versao.js           -> versao desta compilacao
+//      node gerador/versao.js --lancar  -> versao a lancar agora (vazio se nenhuma)
 'use strict';
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
 
@@ -28,14 +30,16 @@ function ultimaLancada() {
   return vs.sort(cmp).pop() || null;
 }
 
-// proxima versao: a do VERSION, se for maior que a ultima lancada; senao, CORRECAO + 1
-function proxima() {
+// versao a lancar: a do VERSION, se ainda nao tem tag; null se ja foi lancada.
+// VERSION abaixo da ultima versao lancada e erro (alguem baixou o numero).
+function lancar() {
   const b = base(), u = ultimaLancada();
-  return (!u || cmp(b, u) > 0 ? b : [u[0], u[1], u[2] + 1]).join('.');
+  if (u && cmp(b, u) < 0) throw new Error(`VERSION (${b.join('.')}) e menor que a ultima versao lancada (v${u.join('.')})`);
+  return !u || cmp(b, u) > 0 ? b.join('.') : null;
 }
 
-// versao desta compilacao: GAME_VERSION (o CI define) ou, localmente, a ultima tag
-// mais os commits desde ela (git describe); sem git, a do VERSION com "-dev"
+// versao desta compilacao: GAME_VERSION (o CI define) ou a ultima tag mais os
+// commits desde ela (git describe); sem git ou sem tags, a do VERSION com "-dev"
 function versaoDoJogo() {
   const env = (process.env.GAME_VERSION || '').trim();
   if (env) {
@@ -58,6 +62,6 @@ function versaoNaTela(v) {
   return s || '?';
 }
 
-module.exports = { versaoDoJogo, proxima, versaoNaTela, SEMVER };
+module.exports = { versaoDoJogo, lancar, versaoNaTela, SEMVER };
 
-if (require.main === module) console.log(process.argv[2] === '--proxima' ? proxima() : versaoDoJogo());
+if (require.main === module) console.log(process.argv[2] === '--lancar' ? (lancar() || '') : versaoDoJogo());

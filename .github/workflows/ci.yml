@@ -1,5 +1,6 @@
 # Testes, compilacao e release da ROM.
-#  - push na main: testa, compila com a proxima versao (semver) e publica o release vX.Y.Z
+#  - push na main: testa e compila; se o VERSION subiu (versao sem tag), publica o
+#    release vX.Y.Z. Commits sem mudanca no VERSION nao geram versao nova.
 #  - pull request: testa e compila uma ROM do PR (artefato para baixar na execucao)
 # Versionamento: ver "Versionamento e releases" no CLAUDE.md.
 name: CI
@@ -12,8 +13,8 @@ on:
     paths-ignore: ['**.md', 'cartucho/**', 'trailer/**', '.gitignore']
   workflow_dispatch:
 
-# na main as execucoes ficam em fila (cada release usa a versao anterior para calcular
-# a proxima); num PR, um push novo cancela a execucao antiga
+# na main as execucoes ficam em fila (dois releases nunca disputam a mesma tag);
+# num PR, um push novo cancela a execucao antiga
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -31,11 +32,11 @@ jobs:
     timeout-minutes: 15
     outputs:
       version: ${{ steps.versao.outputs.version }}
+      release: ${{ steps.versao.outputs.release }}
     steps:
       - uses: actions/checkout@v7
-
-      - name: Busca as tags (versões já lançadas)
-        run: git fetch --quiet --depth=1 --tags origin
+        with:
+          fetch-depth: 0   # historico e tags: versoes lancadas e git describe
 
       - name: Dependências (cc65, Pillow e SDL2 para o Mesen)
         run: |
@@ -64,15 +65,19 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          prox=$(node gerador/versao.js --proxima)
-          case "$EVENTO" in
-            push)         v="$prox" ;;
-            pull_request) v="$prox-pr.$PR+${SHA::7}" ;;
-            *)            v="$prox-dev+${SHA::7}" ;;
-          esac
+          lancar=$(node gerador/versao.js --lancar)   # vazio se o VERSION ja foi lancado
+          release=false
+          if [ "$EVENTO" = push ] && [ -n "$lancar" ]; then
+            v="$lancar"; release=true
+          elif [ "$EVENTO" = pull_request ]; then
+            v="$(tr -d '[:space:]' < VERSION)-pr.$PR+${SHA::7}"
+          else
+            v=$(node gerador/versao.js)              # ex.: 0.0.2-dev.3+abc1234
+          fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
           echo "GAME_VERSION=$v" >> "$GITHUB_ENV"
-          echo "Versão desta compilação: $v"
+          echo "Versão desta compilação: $v (release: $release)"
 
       - name: Compila (inclui o verificador de largura do 65816)
         run: node build.js
@@ -116,7 +121,7 @@ jobs:
   release:
     name: Release
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: needs.build.outputs.release == 'true' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
