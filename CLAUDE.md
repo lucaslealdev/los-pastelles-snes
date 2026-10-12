@@ -180,6 +180,15 @@ The generator modules:
   - Saved in SRAM at `OPT_SRAM`: `'O','P'`, difficulty, music, and speech as `$A0|value`. An old save without that byte defaults to speech on.
 - **Icons:** the emoji sheet (`gerador/icones.py`) is the shop's (items 0–19) plus the menus' (20–23); it holds 24 icons. Title, options and shop load `IconGfx` into OBJ tiles 0–95. The screens that use those tiles reload the sprites: `DayInit`, and `IntroInit` (the street).
 
+### Demo mode (attract mode, `src/demo.s`)
+- **Start:** 30 s with no buttons on the title (`DemoTitulo`, `DEMO_OCIOSO`) starts a demo. `DemoSorteia` rolls a stage in the RAM copy of the save: level 1–24 (which sets the flavors), day, baskets, counter, renovation, neighborhood and extras.
+- **Off during the demo:** tutorial, broken baskets and app deliveries.
+- **The day:** starts at `DEMO_HORA` (14h, about 1 minute).
+- **The CPU playing:** `DemoControle` runs right after `ReadPad` in the main loop. On the day screen, every 4 frames it replaces `pad_new` with the button chosen by `DemoIA` (the same logic as `teste/bot.lua`), and every so often shows `TXT_DEMO` on the HUD.
+- **End:** any real button, or the end of the day (when the next state would be the results), returns to the title.
+- **Saving:** nothing is saved, because the day never writes SRAM and results/shop/tutorial are skipped.
+- **Banks:** `DemoSorteia` (with its own `DemoRand`) and `DemoIA` live in bank 28, called with `JSL` and returning with `RTL`, because bank 0 is full. They can only call routines in the same bank. RAM and the bank-0 tables are reachable through the DBR (`$80`).
+
 ### Menu background (BG2)
 Menu screens (`LoadMenuScene`) show a 2-layer background:
 - BG1 holds the panel. Outside the panel it is transparent.

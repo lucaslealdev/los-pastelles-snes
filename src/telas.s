@@ -95,6 +95,8 @@ TitleInit:
     jsr ClearBg3
     jsr OamClear
     jsr UiTituloOn          ; xadrez animado atras da logo
+    ldx #0
+    stx demo_ocioso
     jsr HasSave
     lda #0
     rol a
@@ -207,6 +209,9 @@ TitleUpdate:
     jsr MusToca
     lda #VOZ_TITULO         ; "Los Pastelles, o imperio do pastel" por cima da musica
     jsr VozToca
+:   jsr DemoTitulo          ; 30 s parado: demonstracao
+    bcc :+
+    rts
 :   jsr TitleSprites
     jsr CodeCheck
     bcc :+

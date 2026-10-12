@@ -134,6 +134,7 @@ SetupDay:
     bne :+
     stz tut_step
 :
+    jsr DemoDia             ; (demonstracao: comeca as 14h, sem cesto quebrado)
     ; quando quebra um cesto: desafio 3 aos 30 s; nos dias normais 1 em 4 (a partir do dia 4)
     ldx #$FFFF
     stx d_breakat

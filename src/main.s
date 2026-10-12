@@ -257,6 +257,7 @@ MainLoop:
     jsr AudioUpdate
     jsr WaitFrame
     jsr ReadPad
+    jsr DemoControle        ; demonstracao: a CPU joga (ou um botao encerra)
     bra MainLoop
 
 ; ---------------------------------------------------------------- NMI
@@ -927,6 +928,7 @@ LoadBasePalettes:
 .include "src/extra.s"
 .include "src/segredo.s"
 .include "src/ui.s"
+.include "src/demo.s"
 
 ; ---------------------------------------------------------------- dados
 .segment "RODATA"

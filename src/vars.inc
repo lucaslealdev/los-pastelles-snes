@@ -232,6 +232,13 @@ vz_tmp2:    .res 2
 vz_ultima:  .res VOZ_N * 2   ; quadro em que cada voz tocou (para nao repetir)
 vz_modo:    .res 1
 tema_pend:  .res 1      ; titulo: musica + narracao quando a carga das vozes acabar
+; demonstracao (src/demo.s)
+demo_on:    .res 1
+demo_ocioso:.res 2
+demo_pad:   .res 2
+demo_lin:   .res 1
+demo_col:   .res 1
+demo_falta: .res 6
 apu_endx:   .res 1      ; ENDX lido no quadro
 mu_est:     .res 1      ; musica gravada: 0 parada, 1 enchendo, 2 tocando
 mu_resta:   .res 3
