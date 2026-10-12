@@ -1,0 +1,195 @@
+// Audio: driver SPC700 minimo (proxy de escrita no DSP), samples BRR e musicas
+'use strict';
+
+// ---------- driver SPC700 em $0200 (codigo de maquina montado a mao)
+// loop: espera porta0 mudar; DSP[porta1] = porta2; ecoa porta0
+const DRIVER = [
+  0xE4, 0xF4,       // 0200 mov a,$F4
+  0xC4, 0x00,       // 0202 mov $00,a
+  0xE4, 0xF4,       // 0204 loop: mov a,$F4
+  0x64, 0x00,       // 0206 cmp a,$00
+  0xF0, 0xFA,       // 0208 beq loop
+  0xC4, 0x00,       // 020A mov $00,a
+  0xE4, 0xF5,       // 020C mov a,$F5
+  0xC4, 0xF2,       // 020E mov $F2,a
+  0xE4, 0xF6,       // 0210 mov a,$F6
+  0xC4, 0xF3,       // 0212 mov $F3,a
+  0xE4, 0x00,       // 0214 mov a,$00
+  0xC4, 0xF4,       // 0216 mov $F4,a
+  0x2F, 0xEA,       // 0218 bra loop
+];
+
+// BRR com filtro 0: nibbles -8..7, shift 11 -> amplitude ~7k
+function brr(levels) { // levels: multiplo de 16, valores -8..7
+  const out = [];
+  for (let b = 0; b < levels.length; b += 16) {
+    const last = b + 16 >= levels.length;
+    out.push((11 << 4) | (last ? 3 : 2));
+    for (let i = 0; i < 16; i += 2) out.push(((levels[b + i] & 15) << 4) | (levels[b + i + 1] & 15));
+  }
+  return out;
+}
+function samples() {
+  const sq = [], pu = [], tri = [];
+  for (let i = 0; i < 32; i++) {
+    sq.push(i < 16 ? 6 : -6);
+    pu.push(i < 8 ? 6 : -6);
+    const t = i < 16 ? i / 16 : (32 - i) / 16; // 0..1..0
+    tri.push(Math.max(-8, Math.min(7, Math.round(t * 15 - 7.5))));
+  }
+  return [brr(sq), brr(tri), brr(pu)];
+}
+
+function spcBlob() {
+  const base = 0x0200, dirAddr = 0x0300;
+  const smp = samples();
+  const blob = new Array(dirAddr - base).fill(0);
+  DRIVER.forEach((b, i) => { blob[i] = b; });
+  const dir = [], data = [];
+  let addr = dirAddr + smp.length * 4;
+  for (const s of smp) { dir.push(addr & 255, addr >> 8, addr & 255, addr >> 8); data.push(...s); addr += s.length; }
+  blob.push(...dir, ...data);
+  // a sequencia do IPL termina com (tamanho+1)&255 != 0
+  while (((blob.length + 1) & 255) === 0) blob.push(0);
+  return Buffer.from(blob);
+}
+
+// ---------- tabela de afinacao: periodo de 32 samples. nota 1 = C2
+function pitchTable() {
+  const t = [0];
+  for (let n = 1; n <= 72; n++) {
+    const midi = n + 35, f = 440 * Math.pow(2, (midi - 69) / 12);
+    t.push(Math.min(0x3FFF, Math.round(f * 32 / 32000 * 4096)));
+  }
+  return t;
+}
+const NOTE_IDX = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function noteNum(tok) {
+  const m = /^([A-G])([#b]?)(\d)$/.exec(tok);
+  if (!m) throw new Error('nota invalida ' + tok);
+  let midi = (parseInt(m[3]) + 1) * 12 + NOTE_IDX[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+  const n = midi - 35; if (n < 1 || n > 72) throw new Error('nota fora da faixa ' + tok);
+  return n;
+}
+// formato do canal: [nota(0=pausa) dur] | F0 inst | F1 vol | FE loop | FF fim
+function compileTrack(src, tempo, { inst = 0, vol = 0x40, loop = true } = {}) {
+  const out = [0xF0, inst, 0xF1, vol];
+  for (const tok of src.trim().split(/\s+/)) {
+    if (tok === '|') continue;
+    if (tok.startsWith('@')) { out.push(0xF0, parseInt(tok.slice(1))); continue; }
+    if (tok.startsWith('v')) { out.push(0xF1, parseInt(tok.slice(1), 16)); continue; }
+    const [n, d] = tok.split(':');
+    let frames = Math.round(parseFloat(d) * tempo);
+    const note = n === 'R' ? 0 : noteNum(n);
+    let first = true;
+    while (frames > 0) { const f = Math.min(frames, 250); out.push(first ? note : 0, f); frames -= f; first = false; }
+  }
+  out.push(loop ? 0xFE : 0xFF);
+  return out;
+}
+
+// instrumentos: [sample, ADSR1, ADSR2]
+const INSTR = [
+  [0, 0xEF, 0xCC], // 0 quadrada (melodia)
+  [1, 0xFF, 0xF0], // 1 triangulo (baixo)
+  [2, 0xFE, 0x54], // 2 pulso curto (acordes)
+  [0, 0xFF, 0xF0], // 3 quadrada sustentada (efeitos)
+  [2, 0xFF, 0xF0], // 4 pulso sustentado (efeitos)
+  [1, 0xFE, 0x76], // 5 triangulo curto (efeitos)
+];
+
+const bar = (s) => s;
+// ---------- musicas (3 vozes: melodia, baixo, acordes)
+const SONGS = {
+  titulo: { tempo: 8, loop: true, ch: [
+    [0, 0x38, `E5:2 G5:2 C6:4 B5:2 A5:2 G5:4 | F5:2 A5:2 G5:2 E5:2 C5:4 R:4 | D5:2 F5:2 A5:4 G5:2 F5:2 E5:4 | D5:2 E5:2 F5:2 D5:2 G5:8 |
+               E5:2 G5:2 C6:4 D6:2 C6:2 A5:4 | F5:2 A5:2 C6:2 A5:2 G5:8 | F5:2 E5:2 D5:2 F5:2 E5:2 D5:2 C5:2 E5:2 | D5:4 G4:4 C5:8`],
+    [1, 0x50, `C3:4 G3:4 C3:4 G3:4 | F2:4 C3:4 C3:4 G3:4 | D3:4 A3:4 D3:4 A3:4 | G2:4 D3:4 G2:4 B2:4 |
+               C3:4 G3:4 A2:4 E3:4 | F2:4 C3:4 F2:4 A2:4 | D3:4 A2:4 G2:4 B2:4 | G2:4 G2:4 C3:8`],
+    [2, 0x22, `R:2 E4:2 R:2 G4:2 R:2 E4:2 R:2 G4:2 | R:2 F4:2 R:2 A4:2 R:2 E4:2 R:2 G4:2 | R:2 F4:2 R:2 A4:2 R:2 F4:2 R:2 A4:2 | R:2 D4:2 R:2 B3:2 R:2 D4:2 R:2 F4:2 |
+               R:2 E4:2 R:2 G4:2 R:2 C4:2 R:2 E4:2 | R:2 F4:2 R:2 A4:2 R:2 F4:2 R:2 A4:2 | R:2 F4:2 R:2 A4:2 R:2 D4:2 R:2 B3:2 | R:2 D4:2 R:2 F4:2 R:2 E4:2 R:2 G4:2`],
+  ] },
+  dia: { tempo: 6, loop: true, ch: [
+    [0, 0x34, `G5:2 R:1 G5:1 A5:2 B5:2 D6:4 B5:4 | C6:2 B5:2 A5:2 G5:2 A5:4 R:4 | E5:2 R:1 E5:1 F#5:2 G5:2 A5:4 G5:4 | F#5:2 E5:2 D5:2 E5:2 F#5:4 D5:4 |
+               G5:2 R:1 G5:1 A5:2 B5:2 D6:4 E6:4 | D6:2 C6:2 B5:2 A5:2 B5:4 G5:4 | C6:2 A5:2 B5:2 G5:2 A5:2 F#5:2 G5:2 E5:2 | D5:2 F#5:2 A5:2 F#5:2 G5:8`],
+    [1, 0x50, `G2:3 G2:1 D3:2 G2:2 G2:3 G2:1 D3:2 B2:2 | C3:3 C3:1 G3:2 C3:2 C3:3 C3:1 G2:2 A2:2 | A2:3 A2:1 E3:2 A2:2 A2:3 A2:1 E3:2 C3:2 | D3:3 D3:1 A3:2 D3:2 D3:3 D3:1 A2:2 F#2:2 |
+               G2:3 G2:1 D3:2 G2:2 G2:3 G2:1 D3:2 B2:2 | E2:3 E2:1 B2:2 E2:2 G2:3 G2:1 D3:2 G2:2 | C3:3 C3:1 G3:2 C3:2 D3:3 D3:1 A2:2 D3:2 | D3:3 D3:1 A2:2 D3:2 G2:4 R:4`],
+    [2, 0x20, `R:2 B4:1 R:1 D5:1 R:3 B4:1 R:1 D5:1 R:3 B4:2 | R:2 C5:1 R:1 E5:1 R:3 C5:1 R:1 E5:1 R:3 C5:2 | R:2 C5:1 R:1 E5:1 R:3 C5:1 R:1 E5:1 R:3 C5:2 | R:2 A4:1 R:1 D5:1 R:3 A4:1 R:1 F#4:1 R:3 A4:2 |
+               R:2 B4:1 R:1 D5:1 R:3 B4:1 R:1 D5:1 R:3 B4:2 | R:2 G4:1 R:1 B4:1 R:3 B4:1 R:1 D5:1 R:3 B4:2 | R:2 C5:1 R:1 E5:1 R:3 A4:1 R:1 D5:1 R:3 F#4:2 | R:2 A4:1 R:1 C5:1 R:3 B4:1 R:1 D5:1 R:3 G4:2`],
+  ] },
+  dia2: { tempo: 6, loop: true, ch: [
+    [0, 0x34, `F5:2 A5:2 C6:2 A5:2 Bb5:4 G5:4 | A5:2 F5:2 G5:2 E5:2 F5:8 | D5:2 F5:2 A5:2 F5:2 G5:4 E5:4 | C5:2 E5:2 G5:2 Bb5:2 A5:4 G5:4 |
+               F5:2 A5:2 C6:2 D6:2 C6:4 A5:4 | Bb5:2 A5:2 G5:2 F5:2 G5:4 C5:4 | D5:2 E5:2 F5:2 G5:2 A5:2 Bb5:2 A5:2 G5:2 | F5:4 C5:4 F5:8`],
+    [1, 0x50, `F2:3 F2:1 C3:2 F2:2 F2:3 F2:1 C3:2 A2:2 | C3:3 C3:1 G2:2 C3:2 F2:3 F2:1 C3:2 F2:2 | D3:3 D3:1 A2:2 D3:2 D3:3 D3:1 A2:2 F2:2 | C3:3 C3:1 G2:2 C3:2 C3:3 C3:1 G2:2 E2:2 |
+               F2:3 F2:1 C3:2 F2:2 F2:3 F2:1 C3:2 A2:2 | Bb2:3 Bb2:1 F2:2 Bb2:2 C3:3 C3:1 G2:2 C3:2 | Bb2:3 Bb2:1 F2:2 Bb2:2 C3:3 C3:1 G2:2 E2:2 | F2:3 F2:1 C3:2 F2:2 F2:4 R:4`],
+    [2, 0x20, `R:2 A4:1 R:1 C5:1 R:3 A4:1 R:1 C5:1 R:3 A4:2 | R:2 G4:1 R:1 C5:1 R:3 A4:1 R:1 C5:1 R:3 A4:2 | R:2 F4:1 R:1 A4:1 R:3 F4:1 R:1 A4:1 R:3 F4:2 | R:2 E4:1 R:1 Bb4:1 R:3 E4:1 R:1 G4:1 R:3 Bb4:2 |
+               R:2 A4:1 R:1 C5:1 R:3 A4:1 R:1 C5:1 R:3 A4:2 | R:2 F4:1 R:1 Bb4:1 R:3 E4:1 R:1 G4:1 R:3 E4:2 | R:2 D4:1 R:1 F4:1 R:3 E4:1 R:1 Bb4:1 R:3 G4:2 | R:2 A4:1 R:1 C5:1 R:3 A4:1 R:1 F4:1 R:3 A4:2`],
+  ] },
+  dia3: { tempo: 5, loop: true, ch: [
+    [0, 0x34, `D5:2 F#5:2 A5:2 D6:2 C#6:2 B5:2 A5:4 | G5:2 B5:2 A5:2 F#5:2 E5:4 R:4 | F#5:2 A5:2 D6:2 F#6:2 E6:2 D6:2 C#6:4 | B5:2 G5:2 E5:2 C#5:2 D5:8 |
+               A5:2 A5:1 A5:1 B5:2 A5:2 G5:2 F#5:2 E5:4 | F#5:2 F#5:1 F#5:1 G5:2 F#5:2 E5:2 D5:2 C#5:4 | D5:2 E5:2 F#5:2 G5:2 A5:2 B5:2 C#6:2 D6:2 | E6:4 C#6:4 D6:8`],
+    [1, 0x50, `D3:2 A2:2 D3:2 A2:2 D3:2 A2:2 F#2:2 A2:2 | G2:2 D3:2 G2:2 D3:2 A2:2 E3:2 A2:2 C#3:2 | D3:2 A2:2 D3:2 A2:2 D3:2 A2:2 F#2:2 A2:2 | G2:2 D3:2 A2:2 E3:2 D3:4 A2:4 |
+               A2:2 E3:2 A2:2 E3:2 A2:2 E3:2 C#3:2 E3:2 | D3:2 A2:2 D3:2 A2:2 A2:2 E3:2 A2:2 E3:2 | G2:2 D3:2 G2:2 D3:2 A2:2 E3:2 A2:2 E3:2 | A2:2 A2:2 A2:2 A2:2 D3:4 D2:4`],
+    [2, 0x1E, `R:2 F#4:2 R:2 A4:2 R:2 F#4:2 R:2 A4:2 | R:2 G4:2 R:2 B4:2 R:2 A4:2 R:2 C#5:2 | R:2 F#4:2 R:2 A4:2 R:2 F#4:2 R:2 A4:2 | R:2 B4:2 R:2 G4:2 R:2 F#4:2 R:2 A4:2 |
+               R:2 A4:2 R:2 C#5:2 R:2 A4:2 R:2 E4:2 | R:2 F#4:2 R:2 A4:2 R:2 E4:2 R:2 G4:2 | R:2 G4:2 R:2 B4:2 R:2 A4:2 R:2 C#5:2 | R:2 E4:2 R:2 G4:2 R:2 F#4:2 R:2 A4:2`],
+  ] },
+  chefe: { tempo: 6, loop: true, ch: [
+    [0, 0x34, `A4:2 C5:2 E5:2 A5:2 G5:3 E5:1 R:2 E5:2 | F5:2 E5:2 D5:2 C5:2 D5:4 R:4 | A4:2 C5:2 E5:2 A5:2 B5:3 G#5:1 R:2 E5:2 | A5:2 G#5:2 F5:2 E5:2 E5:8 |
+               D5:2 F5:2 A5:2 D6:2 C6:3 A5:1 R:2 A5:2 | B5:2 A5:2 G#5:2 F5:2 E5:4 R:4 | C6:2 B5:2 A5:2 G#5:2 A5:2 B5:2 C6:2 D6:2 | E6:4 B5:4 A5:8`],
+    [1, 0x50, `A2:2 A2:2 A3:2 A2:2 A2:2 A2:2 G3:2 A2:2 | F2:2 F2:2 F3:2 F2:2 G2:2 G2:2 G3:2 G2:2 | A2:2 A2:2 A3:2 A2:2 E2:2 E2:2 E3:2 E2:2 | F2:2 F2:2 F3:2 F2:2 E2:2 E2:2 G#2:2 B2:2 |
+               D3:2 D3:2 D3:2 D3:2 F2:2 F2:2 F3:2 F2:2 | E2:2 E2:2 E3:2 E2:2 E2:2 E2:2 B2:2 E3:2 | F2:2 F2:2 F3:2 F2:2 G2:2 G2:2 G3:2 G2:2 | E2:2 E2:2 E3:2 E2:2 A2:4 A2:4`],
+    [2, 0x1C, `R:2 E4:2 R:2 A4:2 R:2 E4:2 R:2 A4:2 | R:2 F4:2 R:2 A4:2 R:2 G4:2 R:2 B4:2 | R:2 E4:2 R:2 A4:2 R:2 E4:2 R:2 G#4:2 | R:2 F4:2 R:2 A4:2 R:2 E4:2 R:2 G#4:2 |
+               R:2 F4:2 R:2 A4:2 R:2 F4:2 R:2 A4:2 | R:2 E4:2 R:2 G#4:2 R:2 E4:2 R:2 B4:2 | R:2 F4:2 R:2 A4:2 R:2 G4:2 R:2 B4:2 | R:2 E4:2 R:2 G#4:2 R:2 E4:2 R:2 A4:2`],
+  ] },
+  resultado: { tempo: 7, loop: true, ch: [
+    [0, 0x30, `C5:2 E5:2 G5:2 E5:2 F5:4 A5:4 | G5:2 E5:2 C5:2 E5:2 D5:8 | C5:2 E5:2 G5:2 C6:2 B5:4 A5:4 | G5:4 F5:2 D5:2 C5:8`],
+    [1, 0x48, `C3:4 G2:4 F2:4 A2:4 | C3:4 E3:4 G2:4 B2:4 | A2:4 E3:4 F2:4 C3:4 | G2:4 G2:4 C3:8`],
+    [2, 0x1C, `R:2 E4:2 R:2 G4:2 R:2 F4:2 R:2 A4:2 | R:2 E4:2 R:2 G4:2 R:2 D4:2 R:2 G4:2 | R:2 C4:2 R:2 E4:2 R:2 F4:2 R:2 A4:2 | R:2 D4:2 R:2 F4:2 R:2 E4:2 R:2 G4:2`],
+  ] },
+  vitoria: { tempo: 5, loop: false, ch: [
+    [0, 0x40, `G5:2 G5:2 G5:2 C6:6 R:2 B5:2 C6:2 D6:2 E6:12`],
+    [1, 0x50, `C3:2 C3:2 C3:2 E3:6 R:2 G2:2 G2:2 G2:2 C3:12`],
+    [2, 0x28, `E5:2 E5:2 E5:2 G5:6 R:2 G5:2 A5:2 B5:2 C6:12`],
+  ] },
+  derrota: { tempo: 8, loop: false, ch: [
+    [0, 0x38, `G4:3 F#4:3 F4:3 E4:9`],
+    [1, 0x48, `C3:3 B2:3 Bb2:3 A2:9`],
+    [2, 0x00, `R:18`],
+  ] },
+};
+
+// efeitos: duracoes em quadros (tempo 1)
+const SFX = {
+  moeda: [4, 0x40, `B5:3 E6:10`],
+  plop: [5, 0x50, `G3:3 C3:5`],
+  pegar: [4, 0x38, `C5:2 G5:4`],
+  erro: [3, 0x40, `C3:6 R:2 C3:8`],
+  cursor: [4, 0x28, `A5:2`],
+  ok: [4, 0x38, `C5:3 E5:3 G5:6`],
+  alarme: [4, 0x30, `A5:4 R:2 A5:4`],
+  bravo: [3, 0x40, `E3:4 C3:10`],
+  nivel: [4, 0x38, `C5:4 E5:4 G5:4 C6:4 E6:4 G6:12`],
+  sino: [4, 0x30, `E6:3 C6:8`],
+  lixo: [5, 0x50, `E3:3 C3:3 A2:6`],
+  queimou: [3, 0x38, `D4:4 C#4:4 C4:12`],
+  // telefone de parede: trim-trim classico
+  telefone: [4, 0x30, `E6:2 C6:2 E6:2 C6:2 E6:2 C6:2 E6:2 C6:2 R:8 E6:2 C6:2 E6:2 C6:2 E6:2 C6:2 E6:2 C6:2`],
+  // alerta de pedido no aplicativo (estilo app de delivery: plim-plim brilhante)
+  app: [0, 0x34, `E6:3 A6:3 E7:8 R:4 E6:3 A6:3 E7:8 R:4 C#7:3 E7:12`],
+  buzina: [3, 0x38, `A4:5 R:3 A4:8`],
+  // letra da caixa de texto aparecendo (bem baixinho)
+  texto: [0, 0x16, `B6:1`],
+};
+
+function musicData() {
+  const songs = [];
+  const names = Object.keys(SONGS);
+  for (const name of names) {
+    const s = SONGS[name];
+    songs.push({ name, tracks: s.ch.map(([inst, vol, src]) => compileTrack(src, s.tempo, { inst, vol, loop: s.loop })) });
+  }
+  const sfx = Object.keys(SFX).map((name) => { const [inst, vol, src] = SFX[name]; return { name, data: compileTrack(src, 1, { inst, vol, loop: false }) }; });
+  return { songs, sfx };
+}
+
+module.exports = { spcBlob, pitchTable, musicData, INSTR };

@@ -1,0 +1,395 @@
+; ================================================================ INTERFACE
+; Efeitos visuais dos menus (tudo por HDMA, sem custo de CPU no quadro):
+;  - painel com degrade de cor (subtracao de cor so dentro da janela do painel)
+;  - faixa de selecao pulsante com chanfro 3D que desliza ate o item escolhido
+;  - caixa que abre com efeito elastico (rolagem vertical por linha)
+;  - faixas do HUD do expediente com brilho de vidro
+;  - texto que aparece letra por letra (maquina de escrever)
+; Canais: 7 = COLDATA, 6 = BG1VOFS, 5 = BG3VOFS (o canal 0 fica com o DMA comum)
+
+HDMAEN   = $420C
+WOBJSEL  = $2125
+WH0      = $2126
+WH1      = $2127
+CGWSEL   = $2130
+CGADSUB  = $2131
+COLDATA  = $2132
+
+UI_OFF   = 0
+UI_PANEL = 1
+UI_HUD   = 2
+
+; ---------------------------------------------------------------- cenas
+; chamada pelas cenas de painel: degrade, faixa desligada e animacao de abertura
+UiPanelOn:
+    .a8
+    .i16
+    ldx #0
+@cp:
+    lda f:UiPanelTab,x
+    sta hdma_tab,x
+    inx
+    cpx #UI_TAB_LEN
+    bne @cp
+    lda #UI_PANEL
+    sta ui_mode
+    stz hl_y
+    stz hl_cur
+    stz hl_old
+    lda #1
+    sta ui_open
+    rts
+
+; cenas sem painel (logo, rua, mapa)
+UiOff:
+    .a8
+    .i16
+    stz ui_mode
+    stz ui_open
+    stz hl_y
+    stz hl_old
+    stz tw_on
+    rts
+
+; expediente: brilho nas faixas do HUD
+UiHudOn:
+    .a8
+    .i16
+    jsr UiOff
+    lda #UI_HUD
+    sta ui_mode
+    rts
+
+; reabre a caixa (cartas seguidas)
+UiReopen:
+    .a8
+    .i16
+    lda ui_mode
+    cmp #UI_PANEL
+    bne :+
+    lda #1
+    sta ui_open
+:   rts
+
+; faixa de selecao na linha de texto do deslocamento X do bg3_buf (seta do menu)
+UiMarkX:
+    .a8
+    .i16
+    A16
+    txa
+    lsr a
+    lsr a
+    lsr a
+    A8
+    and #$F8               ; (X/64)*8 = linha * 8
+    sta hl_y
+    lda #8
+    sta hl_h
+    rts
+
+; ---------------------------------------------------------------- NMI
+; (A8/I16, DBR = $80) - registra os efeitos para o proximo quadro
+UiNmi:
+    .a8
+    .i16
+    lda ui_open
+    beq @normal
+    lda bright
+    bmi @normal            ; tela desligada: espera acender
+    beq @normal
+    ; ----- abertura elastica: canais 5/6 escrevem a rolagem vertical por linha
+    lda ui_open
+    dec a
+    A16
+    and #$00FF
+    asl a
+    tax
+    lda f:UiOpenOfs,x
+    clc
+    adc #.loword(UiOpenTab)
+    sta $4352
+    sta $4362
+    A8
+    lda #^UiOpenTab
+    sta $4354
+    sta $4364
+    lda #$02
+    sta $4350
+    sta $4360
+    lda #<BG3VOFS
+    sta $4351
+    lda #<BG1VOFS
+    sta $4361
+    lda #$60
+    sta HDMAEN
+    lda #$05               ; BG1 + BG3 (sprites aparecem quando a caixa abre)
+    sta TM
+    lda #$30
+    sta CGWSEL
+    stz CGADSUB
+    inc ui_open
+    lda ui_open
+    cmp #(UI_N_OPEN+1)
+    bcc :+
+    stz ui_open
+:   rts
+@normal:
+    lda #$FF
+    sta BG1VOFS
+    lda #$03
+    sta BG1VOFS
+    lda #$FF
+    sta BG3VOFS
+    lda #$03
+    sta BG3VOFS
+    lda #$15
+    sta TM
+    lda ui_mode
+    cmp #UI_PANEL
+    beq @panel
+    cmp #UI_HUD
+    beq @hud
+    stz HDMAEN
+    lda #$30
+    sta CGWSEL
+    stz CGADSUB
+    rts
+@panel:
+    ; subtrai cor no BG1 e no fundo, so dentro do painel (janela 1)
+    lda #$20
+    sta WOBJSEL
+    lda #14
+    sta WH0
+    lda #241
+    sta WH1
+    lda #$10
+    sta CGWSEL
+    lda #$A1
+    sta CGADSUB
+    lda #$20               ; vermelho = 0 (o HDMA escreve verde e azul)
+    sta COLDATA
+    ldx #.loword(hdma_tab)
+    stx $4372
+    stz $4374
+    bra @ch7
+@hud:
+    stz WOBJSEL
+    stz CGWSEL
+    lda #$21               ; soma cor no BG1 e no fundo
+    sta CGADSUB
+    ldx #.loword(UiHudTab)
+    stx $4372
+    lda #^UiHudTab
+    sta $4374
+@ch7:
+    lda #$02
+    sta $4370
+    lda #<COLDATA
+    sta $4371
+    lda #$80
+    sta HDMAEN
+    rts
+
+; ---------------------------------------------------------------- quadro
+; chamada pelo laco principal: texto letra por letra e faixa de selecao
+UiUpdate:
+    .a8
+    .i16
+    jsr TypeStep
+    lda ui_mode
+    cmp #UI_PANEL
+    beq :+
+    rts
+:   ; apaga a faixa do quadro anterior (volta o degrade)
+    lda hl_old
+    beq @nores
+    sta ui_ln
+    lda hl_oldh
+    sta ui_cnt
+@res:
+    jsr UiLineOfs
+    lda f:UiPanelTab,x
+    sta hdma_tab,x
+    lda f:UiPanelTab+1,x
+    sta hdma_tab+1,x
+    inc ui_ln
+    dec ui_cnt
+    bne @res
+    stz hl_old
+@nores:
+    lda hl_y
+    bne :+
+    stz hl_cur
+    rts
+:   lda ui_open
+    beq :+
+    rts
+:   ; desliza ate a linha escolhida (metade do caminho por quadro)
+    lda hl_cur
+    bne :+
+    lda hl_y
+    sta hl_cur
+:   lda hl_y
+    sec
+    sbc hl_cur
+    beq @pos
+    cmp #$80
+    ror a                  ; diferenca / 2 com sinal
+    bne :+
+    lda hl_y               ; falta 1: encosta
+    sta hl_cur
+    bra @pos
+:   clc
+    adc hl_cur
+    sta hl_cur
+@pos:
+    ; faixa comeca 1 linha acima do texto, para envolver a letra com folga
+    lda hl_cur
+    dec a
+    sta hl_old
+    sta ui_ln
+    lda hl_h
+    sta hl_oldh
+    sta ui_cnt
+    ; origem: pulso * (altura * 2) dentro da tabela da altura certa
+    A16
+    lda frame
+    lsr a
+    and #$001F
+    tax
+    A8
+    lda f:UiPulse,x
+    A16
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a                  ; * 16 (8 linhas x 2 bytes)
+    sta ui_src
+    A8
+    lda hl_h
+    cmp #16
+    bne @wr
+    A16
+    lda ui_src
+    asl a                  ; * 32 (16 linhas x 2 bytes)
+    clc
+    adc #(UiBand16 - UiBand8)
+    sta ui_src
+    A8
+@wr:
+    jsr UiLineOfs          ; X = destino
+    txy
+    ldx ui_src
+    lda f:UiBand8,x
+    sta hdma_tab,y
+    lda f:UiBand8+1,x
+    sta hdma_tab+1,y
+    inx
+    inx
+    stx ui_src
+    inc ui_ln
+    dec ui_cnt
+    bne @wr
+    rts
+
+; linha ui_ln (0..223) -> X = deslocamento na tabela HDMA (2 blocos de 112 linhas)
+UiLineOfs:
+    .a8
+    .i16
+    A16
+    lda ui_ln
+    and #$00FF
+    cmp #224
+    bcc :+
+    lda #223
+:   asl a
+    inc a
+    cmp #(1 + 2*112)
+    bcc :+
+    inc a                  ; pula o cabecalho do 2o bloco
+:   tax
+    A8
+    rts
+
+; ---------------------------------------------------------------- texto animado
+; como PrintStr/PrintStrB, mas a caixa vai sendo escrita letra por letra
+TypeStart:
+    .a8
+    .i16
+    lda #0
+TypeStartB:
+    .a8
+    .i16
+    sta tw_ptr+2
+    stx tw_ptr
+    A16
+    lda txt_pos
+    asl a
+    sta tw_pos
+    sta tw_line
+    A8
+    lda txt_attr
+    sta tw_attr
+    stz tw_n
+    lda #1
+    sta tw_on
+    rts
+
+; escreve a proxima letra (espacos e quebras de linha nao gastam quadro)
+TypeStep:
+    .a8
+    .i16
+    lda tw_on
+    bne @lp
+    rts
+@lp:
+    lda [tw_ptr]
+    A16
+    inc tw_ptr
+    A8
+    cmp #$FF
+    bne :+
+    stz tw_on
+    rts
+:   cmp #$FE
+    bne :+
+    A16
+    lda tw_line
+    clc
+    adc #64
+    sta tw_line
+    sta tw_pos
+    A8
+    bra @lp
+:   ldx tw_pos
+    sta bg3_buf,x
+    pha
+    lda tw_attr
+    sta bg3_buf+1,x
+    inx
+    inx
+    stx tw_pos
+    lda #1
+    sta bg3_dirty
+    pla
+    cmp #FONT_SPACE
+    beq @lp
+    ; tique baixinho a cada 3 letras
+    inc tw_n
+    lda tw_n
+    cmp #3
+    bcc :+
+    stz tw_n
+    SFX SFX_TEXTO
+:   rts
+
+; termina o texto na hora (botao A durante a escrita)
+TypeFinish:
+    .a8
+    .i16
+@l: lda tw_on
+    beq :+
+    jsr TypeStep
+    bra @l
+:   rts

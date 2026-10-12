@@ -1,0 +1,205 @@
+; ---------------------------------------------------------------- variaveis do jogo
+.segment "BSS"
+
+; ===== bloco salvo na SRAM (manter contiguo) =====
+save_start:
+s_magic:    .res 4
+s_day:      .res 2
+s_money:    .res 4
+s_stock:    .res 2
+s_level:    .res 1
+s_xp:       .res 2
+s_rep:      .res 1
+s_fryer:    .res 1      ; 1..3 (cestos = nivel + 1)
+s_counter:  .res 1      ; 1..3 (lugares = nivel + 1)
+s_attend:   .res 1
+s_ads:      .res 1
+s_stores:   .res 1      ; lojas extras 0..4
+s_fran:     .res 1      ; franquias 0..5
+s_boss:     .res 1      ; desafios vencidos 0..4
+s_mission:  .res 1
+s_promo:    .res 1
+s_upgrades: .res 1
+s_ending:   .res 1
+s_chapter:  .res 1      ; capitulo ja anunciado
+s_tot_fried:.res 2
+s_tot_sales:.res 4
+s_tot_happy:.res 2
+s_tot_perf: .res 2
+save_end:
+SAVE_SIZE = save_end - save_start
+
+; ===== estado do dia =====
+d_timer:    .res 2
+d_hour:     .res 1
+d_min:      .res 1
+d_sub:      .res 1
+d_closed:   .res 1
+d_endwait:  .res 1
+d_served:   .res 1
+d_total:    .res 1
+d_perfect:  .res 1
+d_waste:    .res 1
+d_happy:    .res 1
+d_sales:    .res 2
+d_tips:     .res 2
+d_spawn:    .res 2
+d_boss:     .res 1      ; $FF = dia normal
+d_event:    .res 1      ; 0 nenhum, 1 concorrente, 2 feira
+d_broke:    .res 1      ; cesto quebrado ($FF nenhum)
+d_goal:     .res 1
+d_mystery:  .res 1      ; ja veio cliente misterioso
+d_myst_ok:  .res 1
+d_paused:   .res 1
+d_patrate:  .res 2
+d_speed:    .res 2
+d_xp:       .res 2
+msg_timer:  .res 1
+
+n_flav:     .res 1
+n_fry:      .res 1
+n_cnt:      .res 1
+
+; clientes (4)
+c_state:    .res 4
+c_var:      .res 4
+c_order:    .res 4
+c_timer:    .res 4
+c_x:        .res 8
+c_tx:       .res 8
+c_pat:      .res 8
+
+; cestos (4)
+f_state:    .res 4
+f_flav:     .res 4
+f_burnt:    .res 4
+f_prog:     .res 8
+
+hold_flav:  .res 1
+hold_q:     .res 1
+hold_soda:  .res 1
+mg_on:      .res 1
+mg_flav:    .res 1
+mg_len:     .res 1
+mg_pos:     .res 1
+mg_seq:     .res 6
+mg_timer:   .res 2
+c_combo:    .res 4
+c_qty:      .res 4
+c_rate:     .res 8
+d_lost:     .res 1
+coin_t:     .res 1
+coin_x:     .res 2
+coin_y:     .res 1
+r_newtrof:  .res 2
+code_pos:   .res 1
+dance_cnt:  .res 1
+dance_t:    .res 1
+; entregas (comandas)
+dv_on:      .res 3
+dv_flav:    .res 3
+dv_qty:     .res 3
+dv_qtot:    .res 3
+dv_app:     .res 3
+dv_t:       .res 6
+ph_ring:    .res 2
+dv_spawn:   .res 2
+pc_flash:   .res 1
+moto_x:     .res 2
+moto_on:    .res 1
+d_deliv:    .res 1
+d_dvsales:  .res 2
+save_slot:  .res 1
+sl_conf:    .res 1
+sl_mode:    .res 1
+r_duel:     .res 1
+tut_step:   .res 1
+tut_box:    .res 1
+tut_shown:  .res 1
+pause_sel:  .res 1
+splash_t:   .res 2
+masc_t:     .res 1
+opt_diff:   .res 1
+opt_music:  .res 1
+d_unit:     .res 1
+echo_on:    .res 1
+; bloco extra salvo em SRAM $700300 (preco + historico de lucro)
+s_price:    .res 1      ; 0 = -1, 1 = normal, 2 = +1, 3 = +2
+hist_n:     .res 1
+hist:       .res 14     ; lucro dos ultimos 7 dias (com sinal)
+s_trof:     .res 2      ; trofeus conquistados (bits)
+s_duels:    .res 1      ; duelos vencidos
+s_tflags:   .res 1      ; bit 0: cliente misterioso satisfeito
+s_tot_dlv:  .res 2      ; entregas feitas
+s_pc:       .res 1      ; computador de pedidos (app)
+s_moto:     .res 1      ; motoboy extra
+s_freezer:  .res 1      ; ingredientes rendem +15
+s_ar:       .res 1      ; ar-condicionado: mais paciencia
+s_musica:   .res 1      ; musica ambiente: +1 de gorjeta
+s_unif:     .res 1      ; uniforme: +R$ 1 por pastel
+s_reforma:  .res 1      ; reforma do salao 0..2
+pop_t:      .res 1
+pop_x:      .res 2
+pop_val:    .res 2
+pop_base:   .res 2
+mg_mode:    .res 1
+mg_tmax:    .res 2      ; 0 fechar pastel, 1 consertar cesto
+d_breakat:  .res 2
+d_brkonce:  .res 1
+r_page:     .res 1
+oil_ph:     .res 1
+at_best:    .res 1
+at_pat:     .res 2
+cur_row:    .res 1
+cur_col0:   .res 1
+cur_col1:   .res 1
+cur_x:      .res 2
+cur_y:      .res 1
+fnd_x:      .res 2
+fnd_anim:   .res 1
+fnd_tx:     .res 2
+
+; resultados / economia
+r_other:    .res 2
+r_rent:     .res 2
+r_salary:   .res 2
+r_profit:   .res 4      ; com sinal
+r_levels:   .res 1
+r_oldlvl:   .res 1
+r_misdone:  .res 1
+r_bossres:  .res 1      ; 0 nada, 1 venceu, 2 perdeu
+
+; fila de cartas
+card_q:     .res 12
+card_n:     .res 1
+card_i:     .res 1
+card_next:  .res 1
+
+; menus
+menu_sel:   .res 1
+menu_top:   .res 1
+loop_i:     .res 2
+loop_j:     .res 1
+lock_lv:    .res 2
+menu_msg:   .res 1
+title_has_save: .res 1
+intro_t:    .res 2
+sign_t:     .res 1
+
+; ----- interface (src/ui.s)
+ui_mode:    .res 1      ; 0 nada, 1 painel, 2 HUD do expediente
+ui_open:    .res 1      ; passo da abertura elastica (0 = parada)
+hl_y:       .res 1      ; linha (pixel) do item escolhido; 0 = sem faixa
+hl_h:       .res 1      ; altura da faixa: 8 ou 16
+hl_cur:     .res 1      ; posicao atual (desliza ate hl_y)
+hl_old:     .res 1      ; faixa desenhada no quadro anterior
+hl_oldh:    .res 1
+ui_ln:      .res 1
+ui_cnt:     .res 1
+ui_src:     .res 2
+tw_on:      .res 1
+tw_pos:     .res 2
+tw_line:    .res 2
+tw_attr:    .res 1
+tw_n:       .res 1
+hdma_tab:   .res 452

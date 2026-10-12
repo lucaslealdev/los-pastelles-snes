@@ -1,0 +1,25 @@
+# Ferramentas de terceiros (baixe à parte: cc65 e Mesen 2)
+tools/
+teste/mesen/
+
+# Arquivos gerados pelo build
+gen/
+__pycache__/
+
+# Saves e cópias de segurança
+*.srm
+.restauracao/
+
+# Saídas dos testes automáticos
+teste/*.png
+teste/*.txt
+teste/ui/
+
+# Material bruto do trailer (o .mp4 final fica)
+trailer/quadros/
+trailer/quadros2/
+trailer/audio/
+trailer/audio_mix.wav
+
+# Foto de referência de terceiros
+cartucho/br-*.jpg

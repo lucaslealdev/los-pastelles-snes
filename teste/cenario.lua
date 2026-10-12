@@ -1,0 +1,4 @@
+STATE_ADDR = 0x1B
+INPUTS = { }
+SHOTS = { 420 }
+ENDF = 421
