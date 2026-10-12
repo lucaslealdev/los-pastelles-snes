@@ -239,8 +239,8 @@ cards.push('CardTable:');
 cardEntries.forEach(([k, [p]]) => cards.push(`  .byte ${hex2(p & 255)}\n  .word .loword(CTXT_${k}_T), .loword(CTXT_${k}_B)`));
 w('cards.inc', cards.join('\n') + '\n');
 data.push('MissionTxt:\n' + Array.from({ length: 15 }, (_, i) => `  .word TXT_MIS_${i}`).join('\n'));
-data.push('ShopName:\n' + Array.from({ length: 19 }, (_, i) => `  .word TXT_S_${i}`).join('\n'));
-data.push('ShopDesc:\n' + Array.from({ length: 19 }, (_, i) => `  .word TXT_SD_${i}`).join('\n'));
+data.push('ShopName:\n' + Array.from({ length: 20 }, (_, i) => `  .word TXT_S_${i}`).join('\n'));
+data.push('ShopDesc:\n' + Array.from({ length: 20 }, (_, i) => `  .word TXT_SD_${i}`).join('\n'));
 data.push('TrophyTxt:\n' + Array.from({ length: 16 }, (_, i) => `  .word TXT_TROF_${i}`).join('\n'));
 // musica
 music.songs.forEach((s) => s.tracks.forEach((t, c) => data.push(`MUS_${s.name}_${c}:\n${byteLines(t)}`)));

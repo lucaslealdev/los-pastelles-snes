@@ -13,7 +13,7 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 5. O cursor vai sozinho até quem pediu aquele sabor: aperte A. Balão com latinha = **combo**: pegue o refri (X) antes de entregar (+R$ 7).
 6. No fim do dia: resultado (vendas, gorjetas, aluguel, salários, lucro). Depois, a loja:
    ingredientes, fritadeira, balcão, promoção, atendente, publicidade, novas lojas, franquias e mapa.
-   "Abrir a loja" salva o jogo.
+   "Abrir a loja" salva o jogo e começa o próximo dia; "Voltar ao menu" salva e volta à tela inicial (CONTINUAR retoma de onde parou).
 
 ## Conteúdo
 - Tela de título com a logo oficial e cores da marca no jogo todo; mascote (pastelzinho piscando) nas cartas, na loja e comemorando cada pastel perfeito.

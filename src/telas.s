@@ -1663,7 +1663,7 @@ ItemPrice:
     tax
     A8
     jmp (PriceFn,x)
-PriceFn: .word P0, P1, P2, P3, P4, P5, P6, P7, P9, P10, P11, P12, P13, P14, P15, P8, P8, P8, P8
+PriceFn: .word P0, P1, P2, P3, P4, P5, P6, P7, P9, P10, P11, P12, P13, P14, P15, P8, P8, P8, P8, P8
 
 .macro SETP val
     ldx #val
@@ -2090,8 +2090,9 @@ PriceLvTxt: .word TXT_ST_P0, TXT_ST_P1, TXT_ST_P2, TXT_ST_P3
 SH_PRECO = 15
 SH_MAPA  = 16
 SH_TROF  = 17
-SH_ABRIR = 18
-SH_N     = 19
+SH_MENU  = 18               ; voltar ao menu (titulo): salva e sai do jogo
+SH_ABRIR = 19
+SH_N     = 20
 SH_VIS   = 6               ; itens visiveis (a lista rola)
 
 ShopMsgs: .word TXT_SM_OK, TXT_SM_SEM, TXT_SM_BLOQ, TXT_SM_REP, TXT_SM_MAX, TXT_SM_ATIVO
@@ -2253,6 +2254,13 @@ ShopUpdate:
     bne :+
     SFX SFX_OK
     lda #ST_TROF
+    sta next_state
+    rts
+:   cmp #SH_MENU
+    bne :+
+    jsr SaveGame            ; salva e volta para a tela de titulo (CONTINUAR retoma)
+    SFX SFX_OK
+    lda #ST_TITLE
     sta next_state
     rts
 :   cmp #SH_ABRIR
