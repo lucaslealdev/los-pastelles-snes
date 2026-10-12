@@ -26,6 +26,10 @@ emu.addEventCallback(function()
   elseif st == 1 or st == 2 then if t % 40 < 4 then inp.a = true end
   elseif st == 4 and t > 90 then              -- depois da transicao (init da tela)
     local tut = r8("tut_step")
+    if tut == 255 and not viu["minijogo aberto"] then
+      log:write("FALHOU: o tutorial nem comecou (jogo salvo antigo em teste/mesen/Saves? apague a pasta)\n")
+      log:close() emu.stop(1) return
+    end
     if tut == 255 then
       log:write(string.format("tutorial terminou f=%d: servidos=%d perfeitos=%d desperdicio=%d perdidos=%d total=%d timer=%d\n",
         f, r8("d_served"), r8("d_perfect"), r8("d_waste"), r8("d_lost"), r8("d_total"), r16("d_timer")))

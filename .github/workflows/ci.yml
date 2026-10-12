@@ -87,6 +87,7 @@ jobs:
           chmod +x teste/mesen/Mesen
           # modo portatil: controle na porta 1 e acesso a arquivos para o script Lua
           printf '%s' '{"Snes":{"Port1":{"Type":"SnesController"}},"Debug":{"ScriptWindow":{"AllowIoOsAccess":true}}}' > teste/mesen/settings.json
+          rm -rf teste/mesen/Saves      # cada teste comeca sem jogo salvo
           set +e
           LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 \
             timeout 600 teste/mesen/Mesen --testrunner LosPastelles.sfc teste/ci.lua
@@ -102,6 +103,7 @@ jobs:
 
       - name: Teste do tutorial guiado (jogador que tenta errar)
         run: |
+          rm -rf teste/mesen/Saves      # o save do teste anterior pularia o tutorial
           set +e
           LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 \
             timeout 300 teste/mesen/Mesen --testrunner LosPastelles.sfc teste/tutorial.lua

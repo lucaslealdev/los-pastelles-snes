@@ -40,6 +40,7 @@ teste/mesen/Mesen.exe --testrunner LosPastelles.sfc teste/bot.lua
 - The robot plays a new game, and the script checks these milestones in order: day 1 starts, the tutorial is completed, the day ends (results), the shop opens, and day 2 starts.
 - It also checks for a valid save in SRAM and allows at most 4 lag frames during gameplay. Scene loads and open boxes don't count, since they pause the loop on purpose.
 - It exits with code 0 if everything passed and 1 if anything failed. A summary goes to `teste/ci.txt`, and the robot's own log goes to `teste/bot.txt`.
+- Every test assumes a cartridge with no saves: delete `teste/mesen/Saves` before each run (CI does that). A leftover save makes the game load a game where the tutorial is already done.
 - It takes about 55 s (about 9,700 frames). Run it locally (Linux) with:
 
 ```
