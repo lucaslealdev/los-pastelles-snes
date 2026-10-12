@@ -781,6 +781,7 @@ SplashInit:
     PRINT TXT_SP_AUTOR, 7, 17, 5
     PRINT TXT_SP_SITE, 4, 20, 7
     PRINT TXT_SP_ANO, 7, 22, 6
+    PRINT TXT_SP_VER, SP_VER_COL, 24, 4   ; versao calculada na compilacao
     ldx #0
     stx splash_t
     jsr SplashSprite

@@ -19,9 +19,11 @@ const hex4 = (n) => '$' + n.toString(16).toUpperCase().padStart(4, '0');
 const byteLines = (arr) => { const out = []; for (let i = 0; i < arr.length; i += 16) out.push('  .byte ' + arr.slice(i, i + 16).map(hex2).join(',')); return out.join('\n'); };
 
 // ------------------------------------------------------------ versao (gerador/versao.js)
-// entra so como texto na carta de creditos: nao muda nada do jogo nem do save
+// entra so como texto (abertura e carta de creditos): nao muda nada do jogo nem do save
 const VERSAO = V.versaoDoJogo();
-CARDS.CREDITOS[2] += '\n\nVERSÃO ' + V.versaoNaTela(VERSAO);
+const VERSAO_TXT = 'VERSÃO ' + V.versaoNaTela(VERSAO);
+CARDS.CREDITOS[2] += '\n\n' + VERSAO_TXT;
+T.SP_VER = VERSAO_TXT;                              // abertura, centralizada (SP_VER_COL)
 fs.writeFileSync(path.join(GEN, 'versao.txt'), VERSAO + '\n');
 console.log(`versao: ${VERSAO}`);
 
@@ -145,12 +147,24 @@ inc.push(`FONT_BTN0 = ${hex2(F.FONT_BTN0)}`, `N_BTN = ${F.BOTOES.length}`);
 inc.push(`SPC_SIZE = ${spc.length}`);
 inc.push(`MENU_CHK_VRAM = ${hex4(MENU_CHK_TILE * 16)}`);
 inc.push(`TUT_VRAM = ${hex4(TUT_TILE * 16)}`);
+inc.push(`SP_VER_COL = ${(32 - [...VERSAO_TXT].length) >> 1}`);
 { const b = A.TUT_BOX; inc.push(`TUT_X0 = ${b.x}`, `TUT_X1 = ${b.x + b.w - 1}`, `TUT_Y0 = ${b.y}`, `TUT_H = ${b.h}`); }
 inc.push(`UI_N_OPEN = ${UI.N_OPEN}`, `UI_TAB_LEN = ${UI.TAB_LEN}`);
 Object.keys(CARDS).forEach((k, i) => inc.push(`CARD_${k} = ${i}`));
 music.songs.forEach((s, i) => inc.push(`SONG_${s.name.toUpperCase()} = ${i}`));
 music.sfx.forEach((s, i) => inc.push(`SFX_${s.name.toUpperCase()} = ${i}`));
 w('assets.inc', inc.join('\n') + '\n');
+
+// layout dos textos em caixa: largura (caracteres) e altura (linhas) que cabem
+// cartas: corpo na coluna 3, linhas 8..24 (rodape na 26); tutorial: coluna 4, linhas 11..16
+const tam = (l) => [...l.replace(/\{[A-Z]+\}/g, '@')].length;
+function cabe(nome, txt, maxCol, maxLin) {
+  const ls = txt.split('\n');
+  ls.forEach((l, i) => { if (tam(l) > maxCol) throw new Error(`${nome}: linha ${i + 1} com ${tam(l)} caracteres (max ${maxCol}), passa da caixa: "${l}"`); });
+  if (ls.length > maxLin) throw new Error(`${nome}: ${ls.length} linhas (max ${maxLin}), passa da caixa`);
+}
+for (const [k, [, , b]] of Object.entries(CARDS)) cabe('carta ' + k, b, 26, 17);
+for (const [k, v] of Object.entries(T)) if (/^TB_B/.test(k)) cabe(k, v, 25, 6);
 
 const data = [];
 data.push('; gerado por build.js - nao editar');

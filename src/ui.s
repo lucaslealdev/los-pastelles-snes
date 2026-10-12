@@ -529,9 +529,8 @@ BtnSprites:
     lsr a
     lsr a
     and #$00F8
-    A8
-    dec a                  ; o sprite aparece 1 linha abaixo da coordenada
-    sta oam_buf+OAM_BTN+1,x
+    A8                     ; y = linha * 8 exato: 1 px acima, a sombra das letras
+    sta oam_buf+OAM_BTN+1,x ; da linha de cima (BG3, na frente) cobre o botao
     lda btn_tab+2,x
     sec
     sbc #FONT_BTN0
@@ -619,12 +618,12 @@ Footer:
     clc
     adc ft_x0
     sta ft_x1
-    lda ft_y                ; y = linha * 8 - 4 (e o sprite aparece 1 linha abaixo)
+    lda ft_y                ; y = linha * 8 - 4 (pilula de 16 px centrada no texto)
     asl a
     asl a
     asl a
     sec
-    sbc #5
+    sbc #4
     sta ft_y
     lda #1
     sta ft_on
@@ -756,10 +755,11 @@ TutMathTab:
     .byte 1, $B5
     .byte 0
 
-; com o balao aberto: sprites do jogo inteiros dentro do balao somem (ja ficariam
-; cobertos, e contam no limite de sprites por linha, cortando botoes e pilula);
-; os que passam da borda descem para a prioridade 2 (atras do balao, que e BG2
-; com prioridade alta). Botoes e pilula seguem na frente.
+; com o balao aberto, os sprites do jogo que encostam na area do balao somem: os
+; de dentro ja ficariam cobertos, e qualquer um nessas linhas conta no limite de
+; sprites por linha do SNES (32 sprites / 34 tiles), cortando botoes e pilula.
+; Os outros descem para a prioridade 2 (atras do balao, BG2 com prioridade alta).
+; Botoes e pilula seguem na frente.
 TutSprites:
     .a8
     .i16
@@ -770,16 +770,16 @@ TutSprites:
 :   ldx #0
 @l: cpx oam_idx            ; so os sprites que a tela usou
     bcs @r
-    ; dentro do balao? (supondo 16x16; o sprite aparece 1 linha abaixo do y)
+    ; encosta no balao? (supondo 16x16: linhas y..y+15, colunas x..x+15)
     lda oam_buf+1,x
-    cmp #(TUT_Y0-1)
+    cmp #(TUT_Y0-15)
     bcc @atras
-    cmp #(TUT_Y0+TUT_H-16)
+    cmp #(TUT_Y0+TUT_H)
     bcs @atras
     lda oam_buf,x
-    cmp #TUT_X0
+    cmp #(TUT_X0-15)
     bcc @atras
-    cmp #(TUT_X1-14)
+    cmp #(TUT_X1+1)
     bcs @atras
     lda #$F0
     sta oam_buf+1,x

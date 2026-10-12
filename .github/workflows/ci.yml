@@ -100,6 +100,17 @@ jobs:
             exit 1
           fi
 
+      - name: Teste do tutorial guiado (jogador que tenta errar)
+        run: |
+          set +e
+          LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 \
+            timeout 300 teste/mesen/Mesen --testrunner LosPastelles.sfc teste/tutorial.lua
+          codigo=$?
+          set -e
+          cat teste/tutorial.txt 2>/dev/null || echo "teste/tutorial.txt nao foi gerado"
+          { echo '### Tutorial guiado'; echo '```'; cat teste/tutorial.txt 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$codigo" -ne 0 ]; then echo "::error::Teste do tutorial falhou (código $codigo)"; exit 1; fi
+
       - name: Prepara a ROM
         run: cp LosPastelles.sfc "LosPastelles-${{ steps.versao.outputs.version }}.sfc"
 

@@ -816,7 +816,11 @@ DayMission:
 DayClock:
     .a8
     .i16
-    A16
+    lda tut_step            ; tutorial guiado: o relogio fica parado
+    cmp #$FF
+    beq :+
+    rts
+:   A16
     inc d_timer
     A8
     inc d_sub
@@ -898,7 +902,11 @@ DayClock:
 DayInput:
     .a8
     .i16
-    lda pad_new+1
+    lda tut_step
+    cmp #$FF
+    beq :+
+    jmp TutInput
+:   lda pad_new+1
     and #KH_LEFT
     beq @nl
     jsr CurCount
@@ -987,6 +995,69 @@ DayInput:
     jsr ActionA
 @na:
     rts
+
+; tutorial guiado: o jogo poe o cursor no lugar certo de cada passo e so aceita o A
+; na hora certa (direcionais, B, X e Y nao fazem nada)
+TUT_PONTO = 185             ; o pastel para aqui (meio do ponto perfeito, 160..209)
+TutInput:
+    .a8
+    .i16
+    ; pastel na mao: entregar ao cliente (o cursor vai ate ele)
+    lda hold_flav
+    cmp #$FF
+    beq @semmao
+    jsr AutoTarget
+    lda pad_new
+    and #KL_A
+    beq @r
+    jmp ServeCustomer
+@semmao:
+    ; pastel no oleo: cursor no cesto; A so com o pastel no ponto
+    ldx #0
+@cesto:
+    lda f_state,x
+    bne @frit
+    inx
+    cpx #4
+    bne @cesto
+    ; nada ainda: cursor no sabor carne; A so com o cliente na loja
+    lda #1
+    sta cur_row
+    stz cur_col1
+    lda pad_new
+    and #KL_A
+    beq @r
+    ldx #0
+:   lda c_state,x
+    bne @ok
+    inx
+    cpx #4
+    bne :-
+    bra @nao
+@frit:
+    lda #1
+    sta cur_row
+    txa
+    clc
+    adc n_flav
+    sta cur_col1
+    lda pad_new
+    and #KL_A
+    beq @r
+    A16
+    txa
+    asl a
+    tay
+    lda f_prog,y
+    A8
+    xba
+    cmp #160
+    bcc @nao                ; ainda cru: espera a barra ficar verde
+@ok:
+    jmp ActionA
+@nao:
+    SFX SFX_ERRO
+@r: rts
 
 CurCount:
     .a8
@@ -1180,10 +1251,14 @@ MiniStart:
 MiniGame:
     .a8
     .i16
+    lda tut_step            ; tutorial: o tempo nao corre
+    cmp #$FF
+    bne @semtempo
     A16
     dec mg_timer
     A8
     beq @fail
+@semtempo:
     A16
     lda pad_new
     and #$CFC0
@@ -1201,13 +1276,19 @@ MiniGame:
     lda MgMask,x
     and tmp
     A8
-    beq @fail
+    beq @errou
     inc mg_pos
     lda mg_pos
     cmp mg_len
     bcs @ok
     SFX SFX_CURSOR
 @draw:
+    jmp MiniDraw
+@errou:
+    lda tut_step            ; tutorial: so avisa e espera o botao certo
+    cmp #$FF
+    beq @fail
+    SFX SFX_ERRO
     jmp MiniDraw
 @ok:
     stz mg_on
@@ -2012,7 +2093,12 @@ RepDown:
 DaySpawn:
     .a8
     .i16
-    lda d_closed
+    lda tut_step            ; tutorial: um cliente so (o primeiro pedido)
+    cmp #$FF
+    beq :+
+    lda d_total
+    bne @rts
+:   lda d_closed
     bne @rts
     A16
     lda d_spawn
@@ -2182,7 +2268,18 @@ DaySpawn:
     lda #1
     sta c_combo,x
 @cnt:
-    jsr SetRate
+    lda tut_step            ; tutorial: pedido simples de carne
+    cmp #$FF
+    beq :+
+    stz c_order,x
+    stz c_combo,x
+    lda #1
+    sta c_qty,x
+    lda c_var,x
+    cmp #4
+    bcc :+
+    stz c_var,x             ; nem misterioso nem turista
+:   jsr SetRate
     inc d_total
     jsr NextInterval
     rts
@@ -2377,7 +2474,10 @@ CustUpdate:
 @n1:
     cmp #2
     bne @leave
-    ; esperando
+    ; esperando (no tutorial a paciencia nao cai)
+    lda tut_step
+    cmp #$FF
+    bne @next
     A16
     lda c_pat,y
     sec
@@ -2428,6 +2528,12 @@ FryUpdate:
     .a8
     .i16
     stz sizzle_want
+    ldx #$FFFF
+    lda tut_step
+    cmp #$FF
+    beq :+
+    ldx #(TUT_PONTO << 8)
+:   stx fry_lim
     ldx #0
 @lp:
     lda f_state,x
@@ -2444,6 +2550,9 @@ FryUpdate:
     adc d_speed
     bcc :+
     lda #$FFFF
+:   cmp fry_lim
+    bcc :+
+    lda fry_lim
 :   sta f_prog,y
     A8
     xba

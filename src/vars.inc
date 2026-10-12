@@ -116,6 +116,7 @@ r_duel:     .res 1
 tut_step:   .res 1
 tut_box:    .res 1
 tut_shown:  .res 1
+fry_lim:    .res 2      ; teto do progresso da fritura (no tutorial para no ponto)
 pause_sel:  .res 1
 splash_t:   .res 2
 masc_t:     .res 1

@@ -36,7 +36,7 @@ There is no unit test suite. Tests are Lua scripts that run inside **Mesen 2** i
 teste/mesen/Mesen.exe --testrunner LosPastelles.sfc teste/bot.lua
 ```
 
-`teste/ci.lua` is the pass/fail test that CI runs:
+`teste/ci.lua` is the main pass/fail test that CI runs (`teste/tutorial.lua`, described under "Guided tutorial", runs right after it):
 - The robot plays a new game, and the script checks these milestones in order: day 1 starts, the tutorial is completed, the day ends (results), the shop opens, and day 2 starts.
 - It also checks for a valid save in SRAM and allows at most 4 lag frames during gameplay. Scene loads and open boxes don't count, since they pause the loop on purpose.
 - It exits with code 0 if everything passed and 1 if anything failed. A summary goes to `teste/ci.txt`, and the robot's own log goes to `teste/bot.txt`.
@@ -73,7 +73,7 @@ It has two commands:
   - otherwise `git describe`, giving the latest tag plus the commits since it (e.g. `0.0.2-dev.3+abc1234`; exactly `0.0.2` on the tagged commit);
   - with no git or no tags, `VERSION` plus `-dev`.
 
-`build.js` only writes the version as text in the credits card (`CARDS.CREDITOS`, line "VERSÃO …"). Nothing in the game logic, the save format or the ROM layout depends on it.
+`build.js` only writes the version as text, as "VERSÃO …": in the credits card (`CARDS.CREDITOS`) and on the opening screen (`TXT_SP_VER`, centered on row 24 via `SP_VER_COL`). Nothing in the game logic, the save format or the ROM layout depends on it.
 - `versaoNaTela` keeps only characters that have a glyph and caps the text at 19 characters. If it's too long, the `+metadata` part is dropped first.
 - `gen/versao.txt` records the version of the last build.
 
@@ -112,6 +112,14 @@ The generator modules:
   - `PrintStr`/`TypeStep` record its position via `BtnReg` in `ui.s`.
   - Every frame, `BtnSprites` draws a colored 8×8 button sprite (`SPR_BTN8_*`, sprite palette 0) over each recorded position that still holds the glyph.
   - At most 12 buttons can be on screen at once.
+- **Text layout in boxes (avoid broken glyphs and text past the box):**
+  - Text is in 8×8 cells. A button sprite fills its whole cell, and its Y has to be exactly `row × 8`. Text (BG3) is drawn on top of sprites, so if the sprite is even 1 pixel higher or lower, the shadow of the letters on the next line covers the edge of the button. Never offset button sprites vertically.
+  - In texts with buttons, put a blank line (`\n\n`) between paragraphs/items, as in `INTRO_B` and the tutorial (`TB_B*`, which is double-spaced). That gives vertical breathing room around the icons. Dense lines are fine only inside the same item.
+  - Maximum widths, counting `{X}` as 1 character:
+    - **Card body:** column 3, up to 26 characters per line and 17 lines (rows 8–24; the footer is on row 26).
+    - **Tutorial box:** column 4, up to 25 characters and 6 rows.
+  - `build.js` (`cabe`) fails the build if a card or `TB_B*` goes past those limits. Break the line by hand, aligning continuation lines with spaces as in the numbered lists.
+  - The sprite limit per scanline (32 sprites / 34 8 px tiles) also matters. Buttons and the pill are in the last OAM slots and are the first to be dropped. That's why `TutSprites` hides game sprites that touch the tutorial balloon. Any new box drawn over gameplay needs the same care.
 - Dialog-box footers (action hints such as `{A}: CONTINUAR`) are printed with `Footer` in `ui.s` (X = text, A = row; the boxes use row 26, which straddles the panel's bottom edge):
   - It centers the text and records it, and `PillSprites` draws a cream gradient "pill" behind it every frame, made of 16×16 sprites `SPR_PILULA_*` (sprite palette 1).
   - The pill disappears when the text in that position changes.
@@ -133,6 +141,16 @@ Menu screens (`LoadMenuScene`) show a 2-layer background:
 - BG2 holds the checker pattern (`menuChecker` in `arte.js`): 3 tiles at tile index 1021 (`MENU_CHK_VRAM`) and a map at `VRAM_BG2MAP` = $5800.
 
 `UiNmi` scrolls BG2 1 px to the right every 2 frames and turns BG2 on in `TM` only while `ui_mode == UI_PANEL`. Every other scene uses BG1 only.
+
+### Guided tutorial (first order of day 1)
+While `tut_step != $FF` (tutorial active; see `TUT_BIT` in `s_tflags` for "already completed"), the player can't get the first order wrong:
+- **Customer:** `DaySpawn` sends a single customer, who orders meat (no double order, combo, tourist or mystery customer). `CustUpdate` doesn't drop their patience.
+- **Clock:** `DayClock` doesn't run. The hour doesn't advance, no basket breaks and the shop doesn't close.
+- **Input:** `DayInput` hands off to `TutInput`, which places the cursor itself (on the meat bin, then the basket with the pastel, then the customer via `AutoTarget`). Directions, B, X and Y are ignored, and A only works at the right moment: with a customer in the shop, or with the pastel at least at perfect doneness (≥160).
+- **Minigame:** `MiniGame` doesn't count time, and a wrong button only makes the error sound (the pastel doesn't open).
+- **Fryer:** `FryUpdate` caps the progress at `fry_lim`. During the tutorial that's `TUT_PONTO` (185, perfect doneness), so the pastel never burns.
+
+Everything goes back to normal after the first delivery (`tut_step = $FF`). `teste/tutorial.lua` checks all of this with a player who tries to get everything wrong, and runs in CI after `teste/ci.lua`.
 
 ### Tutorial balloon (day 1)
 `TutBox` (in `game.s`) sets `dim_on = 2`, and the NMI then calls `TutNmi` (in `ui.s`):
