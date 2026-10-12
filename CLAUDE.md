@@ -189,6 +189,12 @@ The generator modules:
 - **Saving:** nothing is saved, because the day never writes SRAM and results/shop/tutorial are skipped.
 - **Banks:** `DemoSorteia` (with its own `DemoRand`) and `DemoIA` live in bank 28, called with `JSL` and returning with `RTL`, because bank 0 is full. They can only call routines in the same bank. RAM and the bank-0 tables are reachable through the DBR (`$80`).
 
+### Emoji sprites
+`gerador/emoji_sprites.py` (Twemoji, cached in `arte_fonte/emoji/`) turns sprites that have a perfect emoji into 16×16 with the shop icons' outline: flavors 🥩 🧀 🍗 🥓, lock, anger, heart, coin, X, star, phone, computer, scooter, sparkle and fire.
+- **Colors:** they're quantized to the sprite's fixed palette (0 or 1), because during the day palettes 3–7 belong to the customers.
+- **Fallback:** sprites without a good emoji (calabresa, catupiry, soda can, order bubble, smoke, mascot, pastéis, store) keep the hand-drawn art from `arte.js`.
+- **Build:** `build.js` writes `gen/spal.json` and passes the result (`gen/emoji_spr.json`) to `buildSprites(emojis)`.
+
 ### Menu background (BG2)
 Menu screens (`LoadMenuScene`) show a 2-layer background:
 - BG1 holds the panel. Outside the panel it is transparent.

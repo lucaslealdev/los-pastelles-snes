@@ -95,7 +95,19 @@ const TUT_TILE = 960;
 }
 
 // ------------------------------------------------------------ sprites
-const S = A.buildSprites();
+// sabores e icones como emojis (gerador/emoji_sprites.py; Python so quando mudam)
+fs.writeFileSync(path.join(GEN, 'spal.json'), JSON.stringify(A.SPAL));
+try {
+  execFileSync(PY, [path.join('gerador', 'emoji_sprites.py')], { cwd: ROOT, stdio: 'inherit' });
+} catch (e) {
+  if (!fs.existsSync(path.join(GEN, 'emoji_spr.json'))) throw e;
+  console.warn('Python indisponivel: reutilizando os emojis ja gerados em gen/.');
+}
+const emojis = {};
+for (const [nome, idx] of Object.entries(JSON.parse(fs.readFileSync(path.join(GEN, 'emoji_spr.json'), 'utf8')))) {
+  const im = new Img(16, 16); im.p.set(idx); emojis[nome] = im;
+}
+const S = A.buildSprites(emojis);
 w('spr_tiles.bin', S.tiles);
 w('port_tiles.bin', S.portTiles);
 w('spr_pal.bin', Buffer.concat(S.pals.map(palBytes)));

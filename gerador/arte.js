@@ -728,7 +728,9 @@ function bar(level, fill) {
 }
 
 // ----- alocador da folha de sprites (16 tiles de largura x 32 de altura)
-function buildSprites() {
+// emojis: { nome: Img } de gerador/emoji_sprites.py (usados no lugar do desenho)
+function buildSprites(emojis = {}) {
+  const emo = (nome, desenho) => emojis[nome] || desenho();
   const sheet = new Img(128, 256); // cada pixel guarda (pal<<4)|cor para preview
   const occ = new Array(16 * 32).fill(false);
   const ids = {};
@@ -759,17 +761,17 @@ function buildSprites() {
   // retratos: faixa separada (128x32) carregada por cima dos clientes so nas cartas
   const portImg = new Img(128, 32);
   PORT_SPECS.forEach((sp, i) => { portImg.paste(person(sp), i * 32, 0); ids[`PORT_${i}`] = i * 4; });
-  ['carne', 'queijo', 'frango', 'calabresa', 'catupiry', 'bacon'].forEach((n, i) => put(`ICON_${i}`, icon(n), 0));
+  ['carne', 'queijo', 'frango', 'calabresa', 'catupiry', 'bacon'].forEach((n, i) => put(`ICON_${i}`, emo(n, () => icon(n)), 0));
   put('MASCOTE_0', mascote(false), 1); put('MASCOTE_1', mascote(true), 1);
-  for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'loja', 'franquia', 'estrela', 'refri']) put(n.toUpperCase(), icon(n), 0);
+  for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'loja', 'franquia', 'estrela', 'refri']) put(n.toUpperCase(), emo(n, () => icon(n)), 0);
   put('REFRI_P', refriP(), 0);
   { const b = new Img(8, 8); b.ell(1, 1, 6, 6, 13); b.ell(2, 2, 5, 5, 0); b.set(2, 2, 13); put('BOLHA', b, 1); }
   for (const b of ['U', 'D', 'L', 'R', 'A', 'B', 'X', 'Y', 'OK']) put('BTN_' + b, botao(b), 0);
-  put('TELEFONE', entrega('tel'), 0); put('MONITOR', entrega('pc'), 0); put('MOTO', entrega('moto'), 0);
+  put('TELEFONE', emo('telefone', () => entrega('tel')), 0); put('MONITOR', emo('monitor', () => entrega('pc')), 0); put('MOTO', emo('moto', () => entrega('moto')), 0);
   // digitos amarelos 8x8 para o "+R$" flutuante
   '0123456789+$'.split('').forEach((ch, i) => put('DIG_' + (ch === '+' ? 'MAIS' : ch === '$' ? 'RS' : ch), digito(ch), 0));
   for (let s = 0; s < 3; s++) put(`PASTEL_${s}`, pastel(s), 1);
-  for (const n of ['fumaca', 'brilho', 'fogo']) put(n.toUpperCase(), pastelFx(n), 1);
+  for (const n of ['fumaca', 'brilho', 'fogo']) put(n.toUpperCase(), emo(n, () => pastelFx(n)), 1);
   // botoes do texto: a partir da linha 6 (tiles 96+), que as cartas e a loja nao sobrescrevem
   for (const b of BOTOES) put('BTN8_' + b, botao8(b), 0, 6);
   { const p = pilula(); put('PILULA_E', p.esq, 1, 6); put('PILULA_M', p.meio, 1, 6); put('PILULA_D', p.dir, 1, 6); }
@@ -797,5 +799,5 @@ function buildSprites() {
 
 module.exports = {
   shopScene, shopPal, titleScene, menuScene, menuChecker, tutBalloon, PAL_TUT, TUT_BOX, mapScene, buildSprites, sceneToBG, palBytes,
-  PAL_SHOP, PAL_TITLE, PAL_MENU, PAL_MAP,
+  PAL_SHOP, PAL_TITLE, PAL_MENU, PAL_MAP, SPAL,
 };
