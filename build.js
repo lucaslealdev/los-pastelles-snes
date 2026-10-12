@@ -1,4 +1,4 @@
-// Build da ROM "Los Pastelles: O Imperio do Pastel" (SNES, LoROM 256 KB)
+// Build da ROM "Los Pastelles: O Imperio do Pastel" (SNES, LoROM SlowROM 1 MB)
 // Uso: node build.js
 'use strict';
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
@@ -9,6 +9,8 @@ const { T, CARDS } = require('./gerador/textos');
 const { palBytes } = require('./gerador/gfx');
 
 const ROOT = __dirname, GEN = path.join(ROOT, 'gen');
+// interpretador Python: variavel PYTHON, senao "python" no Windows e "python3" nos demais
+const PY = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
 fs.mkdirSync(GEN, { recursive: true });
 const w = (name, buf) => fs.writeFileSync(path.join(GEN, name), buf);
 const hex2 = (n) => '$' + n.toString(16).toUpperCase().padStart(2, '0');
@@ -21,7 +23,7 @@ const byteLines = (arr) => { const out = []; for (let i = 0; i < arr.length; i +
 const logoIdx = path.join(GEN, 'logo_idx.bin');
 const logoPalFile = path.join(GEN, 'logo_pal.json');
 try {
-  execFileSync('python', [path.join('gerador', 'logo.py')], { cwd: ROOT, stdio: 'inherit' });
+  execFileSync(PY, [path.join('gerador', 'logo.py')], { cwd: ROOT, stdio: 'inherit' });
 } catch (e) {
   if (!fs.existsSync(logoIdx) || !fs.existsSync(logoPalFile)) throw e;
   console.warn('Python indisponivel: reutilizando a logo ja gerada em gen/.');
@@ -76,7 +78,7 @@ w('ui_band8.bin', UI.band(8));
 w('ui_band16.bin', UI.band(16));
 w('ui_open.bin', UI.openTabs());
 try {
-  execFileSync('python', [path.join('gerador', 'icones.py')], { cwd: ROOT, stdio: 'inherit' });
+  execFileSync(PY, [path.join('gerador', 'icones.py')], { cwd: ROOT, stdio: 'inherit' });
 } catch (e) {
   if (!fs.existsSync(path.join(GEN, 'icon_tiles.bin'))) { console.error('icones: precisa de Python/Pillow'); process.exit(1); }
 }
@@ -149,7 +151,7 @@ w('data.inc', data.join('\n') + '\n');
 
 // ------------------------------------------------------------ montagem
 try {
-  execFileSync('python', [path.join('gerador', 'checa_largura.py'), 'src/main.s', 'src/audio.s', 'src/game.s', 'src/telas.s', 'src/extra.s', 'src/segredo.s'], { cwd: ROOT, stdio: 'inherit' });
+  execFileSync(PY, [path.join('gerador', 'checa_largura.py'), 'src/main.s', 'src/audio.s', 'src/game.s', 'src/telas.s', 'src/extra.s', 'src/segredo.s', 'src/ui.s'], { cwd: ROOT, stdio: 'inherit' });
 } catch (e) { console.error('verificador de largura falhou'); }
 const CC = path.join(ROOT, 'tools', 'cc65', 'bin');
 const out = path.join(ROOT, 'LosPastelles.sfc');

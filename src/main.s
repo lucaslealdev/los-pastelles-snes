@@ -1,6 +1,6 @@
 ; =====================================================================
 ;  LOS PASTELLES: O IMPERIO DO PASTEL  -  ROM de Super Nintendo
-;  Montador: ca65 (cc65).  Mapa: LoROM FastROM, 256 KB, 2 KB SRAM
+;  Montador: ca65 (cc65).  Mapa: LoROM SlowROM, 1 MB, 2 KB SRAM
 ;  Convencao: A 8 bits / X,Y 16 bits, DBR = $80, D = $0000
 ; =====================================================================
 .p816
