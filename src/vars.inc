@@ -122,6 +122,7 @@ splash_t:   .res 2
 masc_t:     .res 1
 opt_diff:   .res 1
 opt_music:  .res 1
+opt_falas:  .res 1      ; vozes gravadas ligadas (opcoes)
 d_unit:     .res 1
 echo_on:    .res 1
 ; bloco extra salvo em SRAM $700300 (preco + historico de lucro)

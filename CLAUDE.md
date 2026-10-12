@@ -136,12 +136,56 @@ The generator modules:
 - Register convention: **A is 8-bit, X/Y are 16-bit, DBR = $80, D = $0000**. Switch widths with the `A8`/`A16`/`I8`/`I16` macros so that the assembler's `.a8`/`.a16` tracking stays correct.
 - `gerador/checa_largura.py` runs on every build and flags branches or jumps whose target label was assembled under a different accumulator width. Treat its "problemas: N>0" output as a real bug.
 
+### Audio (SPC700) and recorded voices
+- **The driver** (`DRIVER` in `gerador/audio.js`) is hand-assembled SPC700 code, using the small assembler `monta`. ca65 doesn't assemble SPC700. It's uploaded via IPL to `$0200`.
+  - When it starts, it reads port 0 and only then signals "ready" (`$D5` on port 1). `ApuUpload` waits for that signal.
+  - Port 0 changes on every command:
+    - **Bit 7 = 1 (data):** 3 bytes (ports 1–3) go to write pointer A (`$02`, bit 6 = 0: music and the fixed-voice load) or B (`$06`, bit 6 = 1: speech), which advances 3. Data commands don't return status, which keeps them fast.
+    - **Bit 7 = 0:** port 1 = DSP register and port 2 = value; port 1 = `$80`/`$81` sets pointer A/B to port 2/3. These commands return `ENDX` on port 1.
+  - It always echoes port 0. Sending is pipelined: `APU_ESPERA` waits for the previous command's echo before writing to the ports. `ApuTrio`/`LOTE` don't wait for their own echo. `DspWrite` does.
+- **SPC700 memory** (`ARAM` in `audio.js`):
+
+  | Range | Contents |
+  |---|---|
+  | `$0200` | driver |
+  | `$0300` | sample directory (SRCN 0–2 chiptune waves, 3 music ring, 4 sizzle, 5 speech ring, 6+ fixed voices; `build.js` checks the order) |
+  | `$0400–$CFFF` | fixed voices and the sizzle |
+  | `$D000–$DFFF` | echo (EDL = 2, 32 ms) |
+  | `$E000–$E7FA` | speech ring (227 blocks) |
+  | `$E800–$FFBA` | music ring (675 blocks) |
+
+- **Recorded voices and music** (`gerador/sons.js`, `src/voz.s`): the MP3s in `sounds/` are converted to BRR by `gerador/brr.js`. The decoder used to model the DSP is checked against the samples that Mesen's DSP decodes. The table `VOZES` sets file, type, priority and the cooldown before the same voice can repeat.
+  - **Fixed voices:** the frequent ones (`tipo: 'fixa'`), 8 voices plus the sizzle. Their rate is the highest that fits, currently 9 kHz. They're loaded into the SPC700 in idle time while the splash screen runs. `VozCargaFim` finishes the load immediately if needed.
+  - **Speech streams:** the rare voices, at 10 kHz, played on voice 7 through ring B.
+  - **The recorded song** (`VOZ_TEMA`, 10 kHz, looping): plays on voice 1 through ring A, on the title (with the narration on top) and during the day (in place of the old day chiptunes). It starts with `MusToca`. `MusPara` stops it, and `PlaySong`/`StopMusic` call `MusPara` too.
+  - **Sending data:** `Bomba` runs inside `WaitFrame`, in each frame's idle time, and stops as soon as the NMI arrives. It sends in batches (`LOTE`, at most `LOTE_MAX` = 72 bytes) straight from ROM, prefetching the next 3 bytes while the SPC700 writes the previous ones.
+  - **Priority and cushion:** speech goes first. If it sent a batch, the music waits for the next loop. The music has a 0.5 s cushion so it can get through a rare speech playing on top of it; speech keeps 0.15 s.
+  - **Resync:** once per frame, `VozQuadro`/`MusQuadro` use the `ENDX` value read at the start of `AudioUpdate` (`apu_endx`). When a voice wraps around its ring, the level becomes the write position minus one frame, because the `ENDX` notice arrives up to 1 frame late. If the write position is beyond ¾ of the ring, the write pointer hasn't wrapped yet, so the level is 0.
+  - **Budget:** the day leaves about 170–180 bytes per frame of idle time. Music and speech at 10 kHz use ~94 + 94. Above that rate (or with long speech streams playing alongside the music), the rings run empty in the busy frames. Measure before raising the rates.
+- **Cache:** the converted BRR is committed in `arte_fonte/brr/`. `indice.json` records the MP3 hash, the rate and the encoder version (`BRR.VERSAO`). Building doesn't need ffmpeg; it's only needed when an MP3, a rate or the encoder changes.
+- **To add a voice:**
+  - Put the MP3 in `sounds/` and add it to `VOZES`, then call `VozToca` with `VOZ_<ID>` on the event.
+  - `fixa` is only for short, frequent voices: the fixed voices share ~50 KB, and adding one lowers everyone's rate.
+  - A long `stream` that plays often during the day competes with the music.
+
+### Title and options screens
+- **Title** (`TitleInit`/`TitleMenu`/`TitleSprites` in `telas.s`):
+  - `gerador/logo.py` builds the BG1 image: the logo shrunk at the top, plus the menu card at the bottom (`CARTAO`, same look as the boxes). The background outside the emblem and the card is transparent, found by flood fill from the edge.
+  - Behind it, `UI_TITULO` shows the animated checker (BG2) with no gradient.
+  - The items (`TIT_LIN`/`TIT_COL`) each have an emoji icon (`IconeSprite`, `ICO_*` in `ui.s`). The selected one is red, with a pill behind it (`PilulaLiga`) and a bobbing icon.
+  - The recorded song and the narration start when the fixed-voice load finishes (`tema_pend`), so skipping the splash screen doesn't freeze the title.
+- **Options** (`extra.s`):
+  - One row per item (`OPT_*`): icon, name, value between the d-pad buttons, a pulsing highlight band, an explanation of the selected item (`OptAjuda`) and a pill footer.
+  - Items: difficulty, music (turns the recorded song on or off), speech (`opt_falas`: when off, `VozToca` plays nothing) and back.
+  - Saved in SRAM at `OPT_SRAM`: `'O','P'`, difficulty, music, and speech as `$A0|value`. An old save without that byte defaults to speech on.
+- **Icons:** the emoji sheet (`gerador/icones.py`) is the shop's (items 0–19) plus the menus' (20–23); it holds 24 icons. Title, options and shop load `IconGfx` into OBJ tiles 0–95. The screens that use those tiles reload the sprites: `DayInit`, and `IntroInit` (the street).
+
 ### Menu background (BG2)
 Menu screens (`LoadMenuScene`) show a 2-layer background:
 - BG1 holds the panel. Outside the panel it is transparent.
-- BG2 holds the checker pattern (`menuChecker` in `arte.js`): 3 tiles at tile index 1021 (`MENU_CHK_VRAM`) and a map at `VRAM_BG2MAP` = $5800.
+- BG2 holds the checker pattern (`menuChecker` in `arte.js`): 3 tiles at tile index 1021 (`MENU_CHK_VRAM`), a map at `VRAM_BG2MAP` = $5800, and BG palette 3 (`ChkPal`, loaded by `LoadXadrez` callers). It doesn't use palette 2 because that one belongs to the scene/logo.
 
-`UiNmi` scrolls BG2 1 px to the right every 2 frames and turns BG2 on in `TM` only while `ui_mode == UI_PANEL`. Every other scene uses BG1 only.
+`UiNmi` scrolls BG2 1 px to the right every 2 frames and turns BG2 on in `TM` while `ui_mode` is `UI_PANEL` (boxes) or `UI_TITULO` (title). Every other scene uses BG1 only.
 
 ### Guided tutorial (first order of day 1)
 While `tut_step != $FF` (tutorial active; see `TUT_BIT` in `s_tflags` for "already completed"), the player can't get the first order wrong:

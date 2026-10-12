@@ -23,7 +23,8 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 - Cestos da fritadeira podem quebrar: aperte A no cesto com X e repita 5 botões para consertar.
 - "+R$" flutuando a cada venda, óleo animado, barra de paciência piscando no vermelho.
 - Preço do pastel ajustável na loja (-R$1 até +R$2) e gráfico de lucro dos últimos 7 dias no fim do dia.
-- Opções: dificuldade (Fácil/Normal/Difícil) e música; escolha do bairro onde trabalhar (5 cenários).
+- Opções: dificuldade (Fácil/Normal/Difícil), música e falas (liga/desliga as vozes gravadas); escolha do bairro onde trabalhar (5 cenários).
+- Menus modernos: título com a logo sobre o xadrez animado e um cartão com o menu, ícones emoji em cada item, pílula no item escolhido e botões coloridos do controle nas dicas.
 - Eventos: feira, concorrente, chuva e jogo do Brasil na TV.
 - Pedido duplo (nível 4+): balão com "2" = entregue dois pastéis.
 - Duelo semanal com o Concorrente (dias 7, 14, 21...): bata a meta de clientes satisfeitos e ganhe R$ 100.

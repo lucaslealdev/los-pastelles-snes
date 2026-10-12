@@ -193,7 +193,11 @@ VozToca:
     ldx vz_carga            ; vozes fixas ainda carregando: nada toca
     beq :+
     rts
-:
+:   xba                     ; (a voz fica no B)
+    lda opt_falas           ; falas desligadas nas opcoes: nada toca
+    bne :+
+    rts
+:   xba
 :   sta vz_tmp
     A16
     and #$00FF

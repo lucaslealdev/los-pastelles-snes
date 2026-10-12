@@ -268,7 +268,7 @@ function menuScene() {
 
 // xadrez do fundo dos menus (BG2): 3 tiles (creme, laranja, pontilhado) e mapa 32x32
 // que se repete a cada 4 tiles, para rolar na horizontal sem emenda.
-// tileBase = indice do 1o tile na VRAM; paleta 2 (a mesma do menu)
+// tileBase = indice do 1o tile na VRAM; paleta 3 (PAL_MENU carregada la: ChkPal)
 function menuChecker(tileBase) {
   const R = 5, W = 6;
   const solid = (c) => new Array(64).fill(c);
@@ -278,7 +278,7 @@ function menuChecker(tileBase) {
   for (let ty = 0; ty < 32; ty++) for (let tx = 0; tx < 32; tx++) {
     const a = (tx >> 1) & 1, b = (ty >> 1) & 1;
     const t = a && b ? 1 : (a || b ? 2 : 0);
-    map.writeUInt16LE((tileBase + t) | (2 << 10), (ty * 32 + tx) * 2);
+    map.writeUInt16LE((tileBase + t) | (3 << 10), (ty * 32 + tx) * 2);   // paleta 3 (a 2 e do cenario)
   }
   return { tiles, map };
 }

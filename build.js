@@ -47,7 +47,7 @@ const logoPal = [null, ...JSON.parse(fs.readFileSync(logoPalFile, 'utf8')).cores
 // xadrez animado dos menus (BG2): tiles no fim da area do BG1, que o menu nao usa
 const MENU_CHK_TILE = 1021;
 const CHK = A.menuChecker(MENU_CHK_TILE);
-w('menu_chk_tiles.bin', CHK.tiles); w('menu_chk_map.bin', CHK.map);
+w('menu_chk_tiles.bin', CHK.tiles); w('menu_chk_map.bin', CHK.map); w('chk_pal.bin', palBytes(A.PAL_MENU));
 
 const scenes = {
   logo: [logoImg, logoPal, null],
@@ -72,7 +72,7 @@ const scenes = {
 };
 for (const [name, [img, pal, prio]] of Object.entries(scenes)) {
   const bg = A.sceneToBG(img, 2, prio);
-  if (name === 'menu' && bg.count > MENU_CHK_TILE) throw new Error('menu: tiles demais, invadem o xadrez do BG2');
+  if ((name === 'menu' || name === 'logo') && bg.count > MENU_CHK_TILE) throw new Error(name + ': tiles demais, invadem o xadrez do BG2');
   w(`${name}_tiles.bin`, bg.tiles); w(`${name}_map.bin`, bg.map); w(`${name}_pal.bin`, palBytes(pal));
   console.log(`cenario ${name}: ${bg.count} tiles`);
 }

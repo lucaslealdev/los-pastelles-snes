@@ -22,6 +22,16 @@ COLDATA  = $2132
 UI_OFF   = 0
 UI_PANEL = 1
 UI_HUD   = 2
+UI_TITULO = 3              ; titulo: xadrez animado (BG2) atras da logo, sem degrade
+
+; icones dos menus na folha de gerador/icones.py
+ICO_MUSICA = 12
+ICO_FALAS  = 5
+ICO_VOLTAR = 18
+ICO_NOVO   = 20
+ICO_CONT   = 21
+ICO_OPC    = 22
+ICO_DIF    = 23
 
 ; ---------------------------------------------------------------- cenas
 ; chamada pelas cenas de painel: degrade, faixa desligada e animacao de abertura
@@ -53,6 +63,15 @@ UiOff:
     stz hl_y
     stz hl_old
     stz tw_on
+    rts
+
+; titulo: so o xadrez animado
+UiTituloOn:
+    .a8
+    .i16
+    jsr UiOff
+    lda #UI_TITULO
+    sta ui_mode
     rts
 
 ; expediente: brilho nas faixas do HUD
@@ -98,7 +117,10 @@ UiNmi:
     .i16
     lda ui_mode
     cmp #UI_PANEL
+    beq :+
+    cmp #UI_TITULO
     bne @nochk
+:
     ; xadrez do BG2: anda 1 pixel para a direita a cada 2 quadros (HOFS = -quadro/2)
     A16
     lda frame
@@ -172,7 +194,11 @@ UiNmi:
     beq @panel
     cmp #UI_HUD
     beq @hud
-    stz HDMAEN
+    cmp #UI_TITULO
+    bne :+
+    lda #$17               ; titulo: BG1 + BG2 (xadrez) + BG3 + sprites
+    sta TM
+:   stz HDMAEN
     lda #$30
     sta CGWSEL
     stz CGADSUB
@@ -601,9 +627,6 @@ Footer:
     sta txt_attr
     ldx tmp3
     jsr PrintStr
-    ldx ft_pos
-    lda bg3_buf,x
-    sta ft_code
     ; x da pilula: uma coluna antes do texto ate uma depois
     lda ft_x0
     dec a
@@ -625,8 +648,61 @@ Footer:
     sec
     sbc #4
     sta ft_y
+; liga a pilula com ft_pos (deslocamento no bg3_buf de um caractere que ja esta
+; escrito), ft_x0, ft_x1 (x da peca da direita) e ft_y prontos. Ela some sozinha
+; quando aquele caractere muda (o texto foi apagado ou reescrito)
+PilulaLiga:
+    .a8
+    .i16
+    ldx ft_pos
+    lda bg3_buf,x
+    sta ft_code
     lda #1
     sta ft_on
+    rts
+
+; icone emoji A (0..23, gerador/icones.py) em spr_x/spr_y; carry = 1: balanca
+; (item escolhido). Precisa da folha de icones carregada (IconGfx/IconPal)
+IconeSprite:
+    .a8
+    .i16
+    php
+    A16
+    and #$00FF
+    tax
+    A8
+    lda f:IconPalTab,x
+    asl a
+    ora #$30
+    sta spr_attr
+    txa                     ; tile = (i % 8) * 2 + (i / 8) * 32
+    and #$07
+    asl a
+    sta spr_tile
+    txa
+    and #$F8
+    asl a
+    asl a
+    clc
+    adc spr_tile
+    sta spr_tile
+    stz spr_tile+1
+    plp
+    bcc :+
+    A16
+    lda frame
+    lsr a
+    and #$001F
+    tax
+    A8
+    lda f:UiBob,x
+    clc
+    adc spr_y
+    sta spr_y
+:   lda #1
+    sta spr_size
+    jsr AddSprite
+    stz spr_size
     rts
 
 PillSprites:

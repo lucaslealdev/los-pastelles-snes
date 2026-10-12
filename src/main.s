@@ -970,6 +970,7 @@ MenuPal:    .incbin "gen/menu_pal.bin"
 MenuChkTiles: .incbin "gen/menu_chk_tiles.bin"
 MenuChkTiles_end:
 MenuChkMap:   .incbin "gen/menu_chk_map.bin"
+ChkPal:     .incbin "gen/chk_pal.bin"
 TutTiles:   .incbin "gen/tut_tiles.bin"
 TutTiles_end:
 TutMap:     .incbin "gen/tut_map.bin"
