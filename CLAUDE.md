@@ -62,7 +62,11 @@ The generator modules:
   - `compile()` turns each token into a transparent glyph (codes `FONT_BTN0`…`FONT_BTN0+N_BTN-1`).
   - `PrintStr`/`TypeStep` record its position via `BtnReg` in `ui.s`.
   - Every frame, `BtnSprites` draws a colored 8×8 button sprite (`SPR_BTN8_*`, sprite palette 0) over each recorded position that still holds the glyph.
-  - The sprites use the last 12 OAM slots (`OAM_BTN`), so `AddSprite` stops before them. At most 12 buttons can be on screen at once.
+  - At most 12 buttons can be on screen at once.
+- Dialog-box footers (action hints such as `{A}: CONTINUAR`) are printed with `Footer` in `ui.s` (X = text, A = row; the boxes use row 26, which straddles the panel's bottom edge):
+  - It centers the text and records it, and `PillSprites` draws a cream gradient "pill" behind it every frame, made of 16×16 sprites `SPR_PILULA_*` (sprite palette 1).
+  - The pill disappears when the text in that position changes.
+- Reserved OAM slots (`vars.inc`): 100–111 for buttons (`OAM_BTN`), 112–127 for the pill (`OAM_PILL`). `AddSprite` stops at `OAM_BTN`. Lower slot numbers draw in front, which keeps the buttons over the pill.
 - `gerador/arte.js` and `gerador/gfx.js` contain all pixel art as code: scenes, sprites, palettes and 4bpp encoding. `shopScene(bairro, reforma)` gives 5 neighborhoods × 3 renovation stages.
 - `gerador/audio.js` contains the SPC700 driver blob and the chiptune songs and SFX.
 - `gerador/ui_tabs.js` builds the HDMA gradient and animation tables.
@@ -80,6 +84,13 @@ Menu screens (`LoadMenuScene`) show a 2-layer background:
 - BG2 holds the checker pattern (`menuChecker` in `arte.js`): 3 tiles at tile index 1021 (`MENU_CHK_VRAM`) and a map at `VRAM_BG2MAP` = $5800.
 
 `UiNmi` scrolls BG2 1 px to the right every 2 frames and turns BG2 on in `TM` only while `ui_mode == UI_PANEL`. Every other scene uses BG1 only.
+
+### Tutorial balloon (day 1)
+`TutBox` (in `game.s`) sets `dim_on = 2`, and the NMI then calls `TutNmi` (in `ui.s`):
+- It turns on BG2, which holds the cream balloon (`tutBalloon` in `arte.js`). `LoadShopScene` loads its tiles (from tile 960), map and palette 3. Box size and position (`TUT_X0`…) come from `TUT_BOX` in `arte.js`.
+- Window 1 hides BG1 inside the balloon. HDMA channel 6 limits the window to the balloon's rows.
+- HDMA channel 7 changes `CGADSUB` per line, so BG3 (the HUD) is darkened outside the balloon.
+- `TutSprites` lowers game sprites to priority 2 so they go behind the balloon (BG2 with high priority).
 
 ### Game loop and state machine
 `MainLoop` in `main.s` dispatches through the `StateInit`/`StateUpdate` jump tables (`src/telas.s`), indexed by `state`. The `ST_*` constants are defined at the top of `src/game.s` (title, intro, card, preday, day, results, shop, map, options, choose, slots, splash, trophies, secret). To change screens, write to `next_state`. The main loop runs the new state's Init once, then calls Update every frame, followed by `UiUpdate`, `AudioUpdate`, `WaitFrame` and `ReadPad`. NMI uploads OAM, palettes and VRAM from RAM buffers.

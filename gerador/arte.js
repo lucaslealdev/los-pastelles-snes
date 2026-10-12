@@ -283,6 +283,47 @@ function menuChecker(tileBase) {
   return { tiles, map };
 }
 
+// ----- retangulo arredondado e degrade pontilhado (balao do tutorial, pilula dos rodapes)
+const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+function roundRect(I, x0, y0, w, h, r, cor) {
+  for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) {
+    const cx = Math.max(x0 + r, Math.min(x0 + w - 1 - r, x)), cy = Math.max(y0 + r, Math.min(y0 + h - 1 - r, y));
+    const dx = x - cx, dy = y - cy;
+    if (dx * dx + dy * dy <= r * r + r * 0.6) I.set(x, y, typeof cor === 'function' ? cor(x, y) : cor);
+  }
+}
+// cor ao longo de t (0..1) entre os tons de 'tons', com pontilhado ordenado nas passagens
+const degrade = (tons, t, x, y) => {
+  const v = Math.max(0, Math.min(1, t)) * (tons.length - 1);
+  const i = Math.floor(v), f = v - i;
+  return tons[Math.min(tons.length - 1, i + (f * 16 > BAYER[y & 3][x & 3] ? 1 : 0))];
+};
+
+// balao do tutorial (BG2, so no expediente): paleta propria, mesmo visual das caixas
+const PAL_TUT = [null, '#1C0A04', '#8C4A08', '#A85C28', '#C8A870', '#FFFBF2', '#FFF8EC', '#FBF0DC', '#F7E8CE', '#F3DFC0',
+  '#EDD4AE', '#000000', '#000000', '#000000', '#000000', '#000000'];
+const TUT_BOX = { x: 16, y: 64, w: 224, h: 88 };
+function tutBalloon() {
+  const I = new Img(256, 224);
+  const { x, y, w, h } = TUT_BOX;
+  roundRect(I, x, y, w, h, 6, 1);                 // contorno escuro
+  roundRect(I, x + 1, y + 1, w - 2, h - 2, 5, 3); // moldura caramelo
+  for (let i = x + 4; i < x + w - 4; i++) I.set(i, y + 1, 2);
+  roundRect(I, x + 3, y + 3, w - 6, h - 6, 3, 4); // filete claro (borda suave)
+  roundRect(I, x + 4, y + 4, w - 8, h - 8, 2, (px, py) => degrade([5, 6, 7, 8, 9, 10], (py - y - 4) / (h - 9), px, py));
+  return I;
+}
+
+// pilula dos botoes de acao (rodape das caixas): sprites 16x16 na paleta 1
+// (creme F8F0C8 -> E8D098, brilho F8F8F8, borda C8A868, sombra 805030)
+function pilula() {
+  const I = new Img(48, 16);
+  roundRect(I, 0, 1, 48, 15, 7, 8);                // sombra (1 px abaixo)
+  roundRect(I, 0, 0, 48, 15, 7, 4);                // borda suave
+  roundRect(I, 1, 1, 46, 13, 6, (px, py) => degrade([13, 2, 2, 3], (py - 1) / 12, px, py));
+  return { esq: I.sub(0, 0, 16, 16), meio: I.sub(16, 0, 16, 16), dir: I.sub(32, 0, 16, 16) };
+}
+
 // =================================================================== CENARIO: MAPA
 const PAL_MAP = [null, '#1C0A04', '#3870C8', '#5898E0', '#58A848', '#3C8038', '#88C858', '#C8C0A8',
   '#8C8478', '#F8F8F0', '#DA4804', '#E8D088', '#3A1A0C', '#A86838', '#FAA61E', '#606878'];
@@ -628,7 +669,8 @@ function botao8(tipo) {
     I.rect(2, 1, 4, 6, c2); I.rect(1, 2, 6, 4, c2);
     I.rect(2, 1, 4, 5, c); I.rect(1, 2, 5, 3, c);
     const l = LETRA3[tipo], cl = tipo === 'B' ? k : w; // letra preta no amarelo (contraste)
-    for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 3; xx++) if (l[yy][xx] === '#') I.set(xx + 2, yy + 1, cl);
+    const lx = tipo === 'B' ? 3 : 2; // o B (aberto a direita) fica centrado 1 px adiante
+    for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 3; xx++) if (l[yy][xx] === '#') I.set(xx + lx, yy + 1, cl);
   } else {
     // cruz direcional com o lado pedido aceso
     I.rect(2, 0, 4, 8, k); I.rect(0, 2, 8, 4, k);
@@ -730,6 +772,7 @@ function buildSprites() {
   for (const n of ['fumaca', 'brilho', 'fogo']) put(n.toUpperCase(), pastelFx(n), 1);
   // botoes do texto: a partir da linha 6 (tiles 96+), que as cartas e a loja nao sobrescrevem
   for (const b of BOTOES) put('BTN8_' + b, botao8(b), 0, 6);
+  { const p = pilula(); put('PILULA_E', p.esq, 1, 6); put('PILULA_M', p.meio, 1, 6); put('PILULA_D', p.dir, 1, 6); }
   // barras: precisa de 27 tiles 8x8 consecutivos -> aloca 2 linhas inteiras
   let barBase = -1;
   for (let ty = 31; ty >= 16 && barBase < 0; ty--) {
@@ -753,6 +796,6 @@ function buildSprites() {
 }
 
 module.exports = {
-  shopScene, shopPal, titleScene, menuScene, menuChecker, mapScene, buildSprites, sceneToBG, palBytes,
+  shopScene, shopPal, titleScene, menuScene, menuChecker, tutBalloon, PAL_TUT, TUT_BOX, mapScene, buildSprites, sceneToBG, palBytes,
   PAL_SHOP, PAL_TITLE, PAL_MENU, PAL_MAP,
 };

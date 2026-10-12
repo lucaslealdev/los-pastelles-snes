@@ -459,7 +459,9 @@ DrawCard:
     tyx
     lda #^CardTable
     jsr TypeStartB          ; texto aparece letra por letra
-    PRINT TXT_C_A, 16, 24, 7
+    ldx #TXT_C_A
+    lda #26
+    jsr Footer
     rts
 
 PortTiles: .word SPR_PORT_0, SPR_PORT_1, SPR_PORT_2, SPR_PORT_3, SPR_CUST_4_0, SPR_MASCOTE_0
@@ -1106,7 +1108,9 @@ DrawChart:
     PRINT TXT_G_MELHOR, 3, 24, 6
     PRINT TXT_G_RS, 10, 24, 6
     PRINTNUM16 tmp4, 13, 24, 6, 5
-    PRINT TXT_R_CONT, 16, 25, 7
+    ldx #TXT_R_CONT
+    lda #26
+    jsr Footer
     rts
 
 ; bloco cheio na coluna num (2 tiles) e linha num+1: paleta 6 (verde) / 5 (vermelho)
@@ -1317,7 +1321,9 @@ DrawResults:
     lda #((6<<2)|$20)
     sta txt_attr
     jsr PrintStr
-    PRINT TXT_R_CONT, 16, 25, 7
+    ldx #TXT_R_CONT
+    lda #26
+    jsr Footer
     rts
 
 ResultsUpdate:
@@ -2623,6 +2629,26 @@ SaveGame:
     iny
     cpy #29
     bne @e
+    rts
+
+; grava so o byte s_tflags no bloco extra do espaco atual (o bloco extra nao
+; tem soma de verificacao; NewGame ja gravou o espaco inteiro)
+SaveTFlags:
+    .a8
+    .i16
+    ldx tmp2
+    phx
+    ldx tmp4
+    phx
+    lda save_slot
+    jsr SlotAddr
+    ldx tmp4
+    lda s_tflags
+    sta f:SRAM+2+(s_tflags-s_price),x
+    plx
+    stx tmp4
+    plx
+    stx tmp2
     rts
 
 ; A = espaco -> carry = 1 se ha jogo valido (tmp2 = base)

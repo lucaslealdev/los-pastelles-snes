@@ -6,6 +6,8 @@
 ;  - faixas do HUD do expediente com brilho de vidro
 ;  - texto que aparece letra por letra (maquina de escrever)
 ;  - botoes do controle coloridos no meio do texto (sprites sobre glifos vazios)
+;  - rodape das caixas numa pilula com degrade (sprites) logo abaixo do texto
+;  - balao do tutorial (BG2) com o resto da tela, HUD incluso, escurecido
 ;  - xadrez do fundo (BG2) rolando para a direita sem parar
 ; Canais: 7 = COLDATA, 6 = BG1VOFS, 5 = BG3VOFS (o canal 0 fica com o DMA comum)
 
@@ -219,7 +221,9 @@ UiUpdate:
     .a8
     .i16
     jsr TypeStep
+    jsr TutSprites
     jsr BtnSprites
+    jsr PillSprites
     lda ui_mode
     cmp #UI_PANEL
     beq :+
@@ -554,3 +558,222 @@ BtnSprites:
     stz oam_buf+512+(OAM_BTN/16)+1
     stz oam_buf+512+(OAM_BTN/16)+2
     rts
+
+; ---------------------------------------------------------------- rodape em pilula
+; X = texto (banco 0), A = linha. Centraliza o texto na linha e desenha atras
+; dele uma pilula creme com degrade (sprites 16x16 nos ultimos slots da OAM).
+Footer:
+    .a8
+    .i16
+    sta ft_y
+    stx tmp3
+    ldy #0                  ; tamanho do texto
+:   lda a:0,x
+    cmp #$FF
+    beq :+
+    inx
+    iny
+    bra :-
+:   tya
+    sta ft_x1
+    lda #32                 ; coluna = (32 - tamanho) / 2
+    sec
+    sbc ft_x1
+    lsr a
+    sta ft_x0
+    lda ft_y                ; txt_pos = linha * 32 + coluna
+    A16
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    sta txt_pos
+    lda ft_x0
+    and #$00FF
+    clc
+    adc txt_pos
+    sta txt_pos
+    asl a
+    sta ft_pos
+    A8
+    lda #((7<<2)|$20)
+    sta txt_attr
+    ldx tmp3
+    jsr PrintStr
+    ldx ft_pos
+    lda bg3_buf,x
+    sta ft_code
+    ; x da pilula: uma coluna antes do texto ate uma depois
+    lda ft_x0
+    dec a
+    asl a
+    asl a
+    asl a
+    sta ft_x0
+    lda ft_x1               ; peca da direita em x0 + (tamanho + 2) * 8 - 16
+    asl a
+    asl a
+    asl a
+    clc
+    adc ft_x0
+    sta ft_x1
+    lda ft_y                ; y = linha * 8 - 4 (e o sprite aparece 1 linha abaixo)
+    asl a
+    asl a
+    asl a
+    sec
+    sbc #5
+    sta ft_y
+    lda #1
+    sta ft_on
+    rts
+
+PillSprites:
+    .a8
+    .i16
+    ldx #0
+    lda ft_on
+    beq @hide
+    lda ui_open             ; caixa abrindo: espera
+    bne @hide
+    ldy ft_pos
+    lda bg3_buf,y
+    cmp ft_code
+    beq :+
+    stz ft_on               ; o texto do rodape sumiu
+    bra @hide
+:   ; esquerda, meio (repetido; pode sobrepor) e direita
+    lda ft_x0
+    sta tmp
+    A16
+    lda #SPR_PILULA_E
+    sta tmp2
+    A8
+@lp:
+    lda tmp
+    cmp ft_x1
+    bcc :+
+    lda ft_x1
+    A16
+    ldy #SPR_PILULA_D
+    sty tmp2
+    A8
+:   sta oam_buf+OAM_PILL,x
+    lda ft_y
+    sta oam_buf+OAM_PILL+1,x
+    lda tmp2
+    sta oam_buf+OAM_PILL+2,x
+    lda tmp2+1
+    and #$01
+    ora #$32                ; prioridade 3, paleta 1
+    sta oam_buf+OAM_PILL+3,x
+    inx
+    inx
+    inx
+    inx
+    lda tmp
+    cmp ft_x1
+    bcs @hide               ; a direita ja foi
+    clc
+    adc #16
+    sta tmp
+    A16
+    lda #SPR_PILULA_M
+    sta tmp2
+    A8
+    cpx #(PILL_SLOTS*4)
+    bne @lp
+@hide:
+    cpx #(PILL_SLOTS*4)
+    beq @hi
+    lda #$F0
+    sta oam_buf+OAM_PILL+1,x
+    inx
+    inx
+    inx
+    inx
+    bra @hide
+@hi:
+    ; tabela alta: todos 16x16, x < 256
+    lda #$AA
+    sta oam_buf+512+(OAM_PILL/16)
+    sta oam_buf+512+(OAM_PILL/16)+1
+    sta oam_buf+512+(OAM_PILL/16)+2
+    sta oam_buf+512+(OAM_PILL/16)+3
+    rts
+
+; ---------------------------------------------------------------- balao do tutorial
+; NMI com dim_on = 2: BG2 (balao) ligado; a janela 1 esconde o BG1 dentro do balao
+; e o HDMA limita a janela as linhas do balao e escurece o BG3 (HUD) fora dele
+TMW      = $212E
+W12SEL   = $2123
+TutNmi:
+    .a8
+    .i16
+    lda #$17                ; BG1 + BG2 + BG3 + sprites
+    sta TM
+    lda #$02                ; BG1 na janela 1
+    sta W12SEL
+    lda #$01
+    sta TMW
+    stz BG2HOFS
+    stz BG2HOFS
+    lda #$FF
+    sta BG2VOFS
+    lda #$03
+    sta BG2VOFS
+    ; canal 6: WH0/WH1 por linha
+    lda #$01
+    sta $4360
+    lda #<WH0
+    sta $4361
+    ldx #.loword(TutWinTab)
+    stx $4362
+    lda #^TutWinTab
+    sta $4364
+    ; canal 7: CGADSUB por linha (BG3 escurecido fora do balao)
+    stz $4370
+    lda #<CGADSUB
+    sta $4371
+    ldx #.loword(TutMathTab)
+    stx $4372
+    lda #^TutMathTab
+    sta $4374
+    lda #$C0
+    sta HDMAEN
+    rts
+
+TutWinTab:
+    .byte TUT_Y0, 255, 0
+    .byte TUT_H, TUT_X0, TUT_X1
+    .byte 1, 255, 0
+    .byte 0
+TutMathTab:
+    .byte TUT_Y0, $B5      ; subtrai em BG1, BG3, sprites e fundo
+    .byte TUT_H, $B1       ; no balao: o texto (BG3) fica aceso
+    .byte 1, $B5
+    .byte 0
+
+; com o balao aberto, os sprites do jogo descem para a prioridade 2 (ficam atras
+; do balao, que e BG2 com prioridade alta); botoes e pilula seguem na frente
+TutSprites:
+    .a8
+    .i16
+    lda dim_on
+    cmp #2
+    beq :+
+    rts
+:   ldx #0
+@l: cpx oam_idx            ; so os sprites que a tela usou
+    bcs @r
+    lda oam_buf+3,x
+    and #$EF
+    sta oam_buf+3,x
+    inx
+    inx
+    inx
+    inx
+    bra @l
+@r: rts

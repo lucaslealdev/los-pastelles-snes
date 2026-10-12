@@ -100,7 +100,9 @@ OptDraw:
     lda #((6<<2)|$20)
     sta txt_attr
     jsr PrintStr
-    PRINT TXT_OP_AJ, 3, 22, 7
+    ldx #TXT_OP_AJ
+    lda #26
+    jsr Footer
     ; seta
     lda menu_sel
     asl a
@@ -431,7 +433,12 @@ LoadShopScene:
     sta dma_src+2
     ldx #(32*2)
     ldy #32
-    jmp CopyPal
+    jsr CopyPal
+    ; balao do tutorial (BG2, so aparece com a caixa do tutorial aberta)
+    VRAM_LOAD TutTiles, TUT_VRAM, (TutTiles_end - TutTiles)
+    VRAM_LOAD TutMap, VRAM_BG2MAP, 2048
+    PAL_LOAD TutPal, 48, 32
+    rts
 
 .macro UNIT_SCENE n, r
     .faraddr .ident(.sprintf("Shop%d_%dTiles", n, r))
@@ -660,7 +667,9 @@ SlotsDraw:
     bra @aj
 :   PRINT TXT_SL_VAZ2, 3, 20, 5
 @aj:
-    PRINT TXT_SL_AJ, 3, 25, 4
+    ldx #TXT_SL_AJ
+    lda #26
+    jsr Footer
     rts
 
 SlotsUpdate:
@@ -1086,7 +1095,9 @@ TrofInit:
     iny
     cpy #16
     bne @l
-    PRINT TXT_TR_VOLTAR, 3, 24, 7
+    ldx #TXT_TR_VOLTAR
+    lda #26
+    jsr Footer
     lda s_tflags
     and #FESTA_BIT
     beq :+

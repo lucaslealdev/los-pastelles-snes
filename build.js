@@ -67,6 +67,23 @@ for (const [name, [img, pal, prio]] of Object.entries(scenes)) {
   console.log(`cenario ${name}: ${bg.count} tiles`);
 }
 
+// balao do tutorial (BG2 no expediente): tiles 960+, paleta 3, prioridade alta
+const TUT_TILE = 960;
+{
+  const { tilePixels, enc4 } = require('./gerador/gfx');
+  const img = A.tutBalloon(), tiles = [], dict = new Map(), map = Buffer.alloc(2048);
+  for (let ty = 0; ty < 28; ty++) for (let tx = 0; tx < 32; tx++) {
+    const px = tilePixels(img, tx, ty);
+    if (px.every((c) => !c)) continue;              // tile 0 do cenario e vazio
+    const k = px.join(',');
+    if (!dict.has(k)) { dict.set(k, tiles.length); tiles.push(enc4(px)); }
+    map.writeUInt16LE((TUT_TILE + dict.get(k)) | (3 << 10) | 0x2000, (ty * 32 + tx) * 2);
+  }
+  if (TUT_TILE + tiles.length > MENU_CHK_TILE) throw new Error('balao do tutorial: tiles demais');
+  w('tut_tiles.bin', Buffer.concat(tiles)); w('tut_map.bin', map); w('tut_pal.bin', palBytes(A.PAL_TUT));
+  console.log(`balao do tutorial: ${tiles.length} tiles`);
+}
+
 // ------------------------------------------------------------ sprites
 const S = A.buildSprites();
 w('spr_tiles.bin', S.tiles);
@@ -119,6 +136,8 @@ inc.push(`FONT_COLON = ${hex2(F.CODE[':'])}`);
 inc.push(`FONT_BTN0 = ${hex2(F.FONT_BTN0)}`, `N_BTN = ${F.BOTOES.length}`);
 inc.push(`SPC_SIZE = ${spc.length}`);
 inc.push(`MENU_CHK_VRAM = ${hex4(MENU_CHK_TILE * 16)}`);
+inc.push(`TUT_VRAM = ${hex4(TUT_TILE * 16)}`);
+{ const b = A.TUT_BOX; inc.push(`TUT_X0 = ${b.x}`, `TUT_X1 = ${b.x + b.w - 1}`, `TUT_Y0 = ${b.y}`, `TUT_H = ${b.h}`); }
 inc.push(`UI_N_OPEN = ${UI.N_OPEN}`, `UI_TAB_LEN = ${UI.TAB_LEN}`);
 Object.keys(CARDS).forEach((k, i) => inc.push(`CARD_${k} = ${i}`));
 music.songs.forEach((s, i) => inc.push(`SONG_${s.name.toUpperCase()} = ${i}`));

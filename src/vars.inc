@@ -203,9 +203,18 @@ tw_line:    .res 2
 tw_attr:    .res 1
 tw_n:       .res 1
 hdma_tab:   .res 452
-; botoes desenhados no meio do texto (sprites nos ultimos slots da OAM)
-BTN_SLOTS = 12
-OAM_BTN   = 4 * (128 - BTN_SLOTS)   ; AddSprite nao passa daqui
+; slots reservados no fim da OAM: botoes do texto (na frente) e pilula do rodape
+PILL_SLOTS = 16
+BTN_SLOTS  = 12
+OAM_PILL   = 4 * (128 - PILL_SLOTS)
+OAM_BTN    = OAM_PILL - 4 * BTN_SLOTS   ; AddSprite nao passa daqui
 btn_tab:    .res BTN_SLOTS * 4      ; [posicao no bg3_buf (2), glifo (1; 0 = livre), -]
 btn_tpos:   .res 2
 btn_tcode:  .res 1
+; pilula do rodape (Footer em ui.s)
+ft_on:      .res 1
+ft_pos:     .res 2      ; posicao do 1o caractere no bg3_buf
+ft_code:    .res 1      ; glifo esperado ali (se mudar, a pilula some)
+ft_x0:      .res 1
+ft_x1:      .res 1      ; x da peca da direita
+ft_y:       .res 1

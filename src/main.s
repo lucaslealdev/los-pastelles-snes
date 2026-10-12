@@ -332,6 +332,8 @@ NmiFast:
     inc lag_count
     A8
 @upd:
+    stz $212E               ; janelas (so o tutorial usa)
+    stz $2123
     ; escurece o cenario na pausa (subtracao de cor no BG1 e sprites)
     lda dim_on
     beq @nodim
@@ -345,6 +347,7 @@ NmiFast:
     cmp #2
     lda #$EC
     bcc :+
+    jsr TutNmi
     lda #$F6
 :   sta $2132
     bra @dimd
@@ -956,6 +959,10 @@ MenuPal:    .incbin "gen/menu_pal.bin"
 MenuChkTiles: .incbin "gen/menu_chk_tiles.bin"
 MenuChkTiles_end:
 MenuChkMap:   .incbin "gen/menu_chk_map.bin"
+TutTiles:   .incbin "gen/tut_tiles.bin"
+TutTiles_end:
+TutMap:     .incbin "gen/tut_map.bin"
+TutPal:     .incbin "gen/tut_pal.bin"
 
 .segment "BANK3"
 TitleTiles: .incbin "gen/title_tiles.bin"

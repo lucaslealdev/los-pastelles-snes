@@ -129,7 +129,7 @@ SetupDay:
     stx d_dvsales
     ldx #600
     stx dv_spawn
-    ; tutorial guiado so no primeiro dia
+    ; tutorial guiado so no primeiro dia, e so ate ser concluido uma vez neste jogo salvo
     lda #$FF
     sta tut_step
     stz tut_box
@@ -138,6 +138,9 @@ SetupDay:
     lda s_day
     cmp #1
     A8
+    bne :+
+    lda s_tflags
+    and #TUT_BIT
     bne :+
     stz tut_step
 :
@@ -483,6 +486,8 @@ PauseMenu:
     rts
 
 ; ---------------------------------------------------------------- tutorial do primeiro dia
+TUT_BIT = $08           ; s_tflags: tutorial ja concluido neste jogo salvo
+
 TutTxt: .word TXT_TUT_0, TXT_TUT_0, TXT_TUT_2, TXT_TUT_3, TXT_TUT_4
 
 Tutorial:
@@ -502,6 +507,11 @@ Tutorial:
     beq @nofim
     lda #$FF
     sta tut_step
+    ; primeira entrega: tutorial concluido, nao aparece mais (ja grava na SRAM,
+    ; mesmo que o jogador saia antes do fim do dia)
+    lda #TUT_BIT
+    tsb s_tflags
+    jsr SaveTFlags
     lda #5
     jmp TutBox
 @nofim:
@@ -610,7 +620,7 @@ TutBox:
     A8
     ldy #(9*32+4)
     sty txt_pos
-    lda #((1<<2)|$20)
+    lda #((5<<2)|$20)       ; titulo vermelho (cores das caixas: o balao e creme)
     sta txt_attr
     jsr PrintStr
     A16
@@ -621,7 +631,7 @@ TutBox:
     A8
     ldy #(11*32+4)
     sty txt_pos
-    lda #$20
+    lda #((4<<2)|$20)
     sta txt_attr
     jsr PrintStr
     lda #45                 ; espera antes de aceitar o A (evita pular sem ler)
@@ -655,7 +665,9 @@ TutBoxUpdate:
     lda tut_box
     cmp #1
     bne @r
-    PRINT TXT_C_A, 10, 17, 1
+    ldx #TXT_C_A
+    lda #17
+    jsr Footer
 @r: rts
 @rdy:
     lda pad_new
