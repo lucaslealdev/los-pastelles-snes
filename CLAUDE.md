@@ -12,12 +12,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 node build.js
 ```
 
-This writes intermediate files to `gen/` (gitignored), assembles and links with cc65, fixes the header checksum and overwrites `LosPastelles.sfc` at the repo root. The ROM is committed.
+This writes intermediate files to `gen/` (gitignored), assembles and links with cc65, fixes the header checksum and overwrites `LosPastelles.sfc` at the repo root. The ROM is committed (as a development build; official ROMs come from the GitHub releases). The build is deterministic: the same source and version produce the same bytes.
 
-Requirements that are not in the repo (`tools/` is gitignored and currently absent):
-- cc65 extracted to `tools/cc65`. The build calls `tools/cc65/bin/ca65` and `ld65` directly.
+Requirements that are not in the repo (`tools/` is gitignored):
+- cc65 (2.19). The build uses `tools/cc65/bin/ca65` and `ld65` if they exist; otherwise it runs `ca65`/`ld65` from `PATH` (for example after `apt install cc65`).
 - Python with Pillow, used for `gerador/logo.py`, `gerador/icones.py` and `gerador/checa_largura.py`.
 - The Python interpreter comes from the `PYTHON` env var. If it isn't set, the build uses `python` on Windows and `python3` everywhere else. If Python fails, logo and icons fall back to existing `gen/` files.
+- `gerador/checa_largura.py` (the 65816 width checker) runs on every build. If it finds a problem, the build fails. If Python is missing, it only warns, except in CI (`CI` env var set), where it fails too.
 - `gerador/icones.py` downloads Twemoji PNGs from jsDelivr the first time. They are cached in `arte_fonte/emoji/`, which is committed.
 
 Other generators, run on demand:
@@ -35,6 +36,16 @@ There is no unit test suite. Tests are Lua scripts that run inside **Mesen 2** i
 teste/mesen/Mesen.exe --testrunner LosPastelles.sfc teste/bot.lua
 ```
 
+`teste/ci.lua` is the pass/fail test that CI runs:
+- The robot plays a new game, and the script checks these milestones in order: day 1 starts, the tutorial is completed, the day ends (results), the shop opens, and day 2 starts.
+- It also checks for a valid save in SRAM and allows at most 4 lag frames during gameplay. Scene loads and open boxes don't count, since they pause the loop on purpose.
+- It exits with code 0 if everything passed and 1 if anything failed. A summary goes to `teste/ci.txt`, and the robot's own log goes to `teste/bot.txt`.
+- It takes about 55 s (about 9,700 frames). Run it locally (Linux) with:
+
+```
+LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 teste/mesen/Mesen --testrunner LosPastelles.sfc teste/ci.lua
+```
+
 - `teste/bot.lua` is a robot that plays the game by reading RAM. It resolves variable addresses by name from `gen/labels.txt` (ld65 `-Ln` output), so renaming a variable in `vars.inc` can break the bot. Its behavior is configured with `botcfg*.lua` (choose one by setting the `BOTCFG` global).
 - The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
 - Each Lua script finds `teste/` from its own path via `debug.getinfo`. If Mesen doesn't expose `debug`, it falls back to the relative path `teste/`, so launch Mesen from the repo root. Other paths are built from that directory (`dir .. "../gen/labels.txt"`).
@@ -45,6 +56,41 @@ teste/mesen/Mesen.exe --testrunner LosPastelles.sfc teste/bot.lua
   - That file must have `Debug.ScriptWindow.AllowIoOsAccess: true`, or the scripts can't use `io` and can't save screenshots.
   - It must also have `Snes.Port1.Type: "SnesController"`, or `emu.setInput` is ignored.
   - Press a button for a few polls in a row so the game sees it.
+  - It works without a display. The minimal `settings.json` that CI writes is enough: `{"Snes":{"Port1":{"Type":"SnesController"}},"Debug":{"ScriptWindow":{"AllowIoOsAccess":true}}}`.
+
+## Versioning and releases
+
+The project uses semantic versioning (`MAJOR.MINOR.PATCH`), starting at `0.0.1`. The version is computed by `gerador/versao.js` from two sources:
+- `VERSION`: the minimum version for the next release.
+- git tags `vX.Y.Z`: the versions already released.
+
+`node gerador/versao.js --proxima` prints the next version to release:
+- If `VERSION` is higher than the latest tag, it uses `VERSION`.
+- Otherwise, it uses the latest tag with PATCH + 1.
+
+The version of each build (`node gerador/versao.js`) is:
+- **In CI:** the `GAME_VERSION` env var, validated as semver.
+- **Locally:** `git describe` gives the latest tag plus the commits since it (e.g. `0.0.3-dev.2+abc1234`). With no tags, it's `VERSION` plus `-dev`.
+
+`build.js` only writes the version as text in the credits card (`CARDS.CREDITOS`, line "VERSÃO …"). Nothing in the game logic, the save format or the ROM layout depends on it.
+- `versaoNaTela` keeps only characters that have a glyph and caps the text at 19 characters. If it's too long, the `+metadata` part is dropped first.
+- `gen/versao.txt` records the version of the last build.
+
+**CI** (`.github/workflows/ci.yml`, on `ubuntu-24.04`):
+- **Build job:**
+  - installs cc65, Pillow and SDL2 via apt, with Mesen 2.1.1 cached;
+  - computes the version and compiles with `node build.js` (which includes the width checker);
+  - runs `teste/ci.lua` headless;
+  - uploads the ROM as an artifact (`LosPastelles-<version>.sfc`, kept for 14 days).
+- **Push to `main`:** the version is the next one (e.g. `0.0.2`). The `release` job (the only one with `contents: write`) creates the `v<version>` tag on the commit and publishes the release with the ROM.
+  - Runs on `main` are queued, never in parallel, so two releases never compute the same version.
+- **Pull requests:** the version is `<next>-pr.<number>+<sha>`. The PR's ROM is the artifact of the run, linked in the run summary. A new push cancels the PR's previous run.
+- **Skipped changes:** changes only to `*.md`, `cartucho/`, `trailer/` or `.gitignore` don't run CI (and don't release).
+
+**How to cut a new version:**
+- **PATCH:** nothing to do. Every merge or push to `main` that passes the tests releases the next PATCH automatically (`0.0.1`, `0.0.2`, …).
+- **MINOR or MAJOR:** change `VERSION` (e.g. to `0.1.0` or `1.0.0`) in the same commit/PR as the change. The next release uses that version, and later ones continue from it (`0.1.1`, …). Never lower `VERSION` below the latest tag (it would be ignored).
+- To check what the next release will be: `git fetch --tags && node gerador/versao.js --proxima`.
 
 ## Architecture
 

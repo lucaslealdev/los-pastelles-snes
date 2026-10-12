@@ -6,8 +6,9 @@ Desenvolvido por **Ramon de Oliveira** — [www.lospastelles.com.br](https://www
 ![Capa do jogo](cartucho/capa_jogo.png)
 
 ## Jogar
-Baixe [`LosPastelles.sfc`](LosPastelles.sfc) e abra num emulador de SNES (Mesen, bsnes, Snes9x)
-ou grave num cartucho flash (EverDrive, FXPAK).
+Baixe a ROM (`LosPastelles-<versão>.sfc`) da [versão mais recente](https://github.com/lucaslealdev/los-pastelles-snes/releases/latest)
+e abra num emulador de SNES (Mesen, bsnes, Snes9x) ou grave num cartucho flash (EverDrive, FXPAK).
+A versão aparece na tela de créditos. O [`LosPastelles.sfc`](LosPastelles.sfc) do repositório é a compilação de desenvolvimento.
 
 ![Tela do jogo](cartucho/fotos/foto_jogo.png) ![Loja](cartucho/fotos/foto_loja.png)
 
@@ -20,6 +21,7 @@ Requer Node.js, Python com Pillow e duas ferramentas que não acompanham o repos
 - [cc65](https://cc65.github.io/) extraído em `tools/cc65` (o build usa `tools/cc65/bin/ca65` e `ld65`);
 - [Mesen 2](https://www.mesen.ca/) em `tools/mesen` para jogar e em `teste/mesen` para os testes automáticos.
 
-Depois é só rodar `node build.js`.
+Depois é só rodar `node build.js` (sem `tools/cc65`, o build usa o `ca65`/`ld65` do PATH).
+Cada mudança na `main` que passa nos testes gera um release automaticamente (ver `CLAUDE.md`).
 
 Os ícones dos menus vêm do [Twemoji](https://github.com/twitter/twemoji) (CC-BY 4.0).

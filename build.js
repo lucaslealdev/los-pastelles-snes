@@ -6,6 +6,7 @@ const A = require('./gerador/arte');
 const F = require('./gerador/fonte');
 const AU = require('./gerador/audio');
 const { T, CARDS } = require('./gerador/textos');
+const V = require('./gerador/versao');
 const { palBytes } = require('./gerador/gfx');
 
 const ROOT = __dirname, GEN = path.join(ROOT, 'gen');
@@ -16,6 +17,13 @@ const w = (name, buf) => fs.writeFileSync(path.join(GEN, name), buf);
 const hex2 = (n) => '$' + n.toString(16).toUpperCase().padStart(2, '0');
 const hex4 = (n) => '$' + n.toString(16).toUpperCase().padStart(4, '0');
 const byteLines = (arr) => { const out = []; for (let i = 0; i < arr.length; i += 16) out.push('  .byte ' + arr.slice(i, i + 16).map(hex2).join(',')); return out.join('\n'); };
+
+// ------------------------------------------------------------ versao (gerador/versao.js)
+// entra so como texto na carta de creditos: nao muda nada do jogo nem do save
+const VERSAO = V.versaoDoJogo();
+CARDS.CREDITOS[2] += '\n\nVERSÃO ' + V.versaoNaTela(VERSAO);
+fs.writeFileSync(path.join(GEN, 'versao.txt'), VERSAO + '\n');
+console.log(`versao: ${VERSAO}`);
 
 // ------------------------------------------------------------ logo (gerador/logo.py)
 // Python/Pillow so e necessario quando a imagem da logo foi alterada. Com os
@@ -178,14 +186,21 @@ AU.INSTR.forEach((i) => data.push(`  .byte ${i.map(hex2).join(',')}`));
 w('data.inc', data.join('\n') + '\n');
 
 // ------------------------------------------------------------ montagem
+// verificador de largura: desvio com largura errada e erro de verdade; sem Python so
+// avisa (no CI, onde a variavel CI existe, tambem falha)
 try {
   execFileSync(PY, [path.join('gerador', 'checa_largura.py'), 'src/main.s', 'src/audio.s', 'src/game.s', 'src/telas.s', 'src/extra.s', 'src/segredo.s', 'src/ui.s'], { cwd: ROOT, stdio: 'inherit' });
-} catch (e) { console.error('verificador de largura falhou'); }
-const CC = path.join(ROOT, 'tools', 'cc65', 'bin');
+} catch (e) {
+  if (e.status === 1 || process.env.CI) { console.error('FALHA NO VERIFICADOR DE LARGURA'); process.exit(1); }
+  console.warn('verificador de largura nao rodou (precisa de Python)');
+}
+// cc65: tools/cc65/bin se existir; senao, ca65/ld65 do PATH (ex.: apt install cc65)
+const CC_LOCAL = path.join(ROOT, 'tools', 'cc65', 'bin');
+const cc = (n) => (fs.existsSync(path.join(CC_LOCAL, n)) || fs.existsSync(path.join(CC_LOCAL, n + '.exe')) ? path.join(CC_LOCAL, n) : n);
 const out = path.join(ROOT, 'LosPastelles.sfc');
 try {
-  execFileSync(path.join(CC, 'ca65'), ['--cpu', '65816', '-g', '-I', '.', '-o', 'gen/main.o', '-l', 'gen/main.lst', 'src/main.s'], { cwd: ROOT, stdio: 'inherit' });
-  execFileSync(path.join(CC, 'ld65'), ['-C', 'src/snes.cfg', '-o', out, '-m', 'gen/map.txt', '-Ln', 'gen/labels.txt', 'gen/main.o'], { cwd: ROOT, stdio: 'inherit' });
+  execFileSync(cc('ca65'), ['--cpu', '65816', '-g', '-I', '.', '-o', 'gen/main.o', '-l', 'gen/main.lst', 'src/main.s'], { cwd: ROOT, stdio: 'inherit' });
+  execFileSync(cc('ld65'), ['-C', 'src/snes.cfg', '-o', out, '-m', 'gen/map.txt', '-Ln', 'gen/labels.txt', 'gen/main.o'], { cwd: ROOT, stdio: 'inherit' });
 } catch (e) { console.error('FALHA NA MONTAGEM'); process.exit(1); }
 
 // checksum
@@ -194,4 +209,4 @@ rom.writeUInt16LE(0xFFFF, 0x7FDC); rom.writeUInt16LE(0x0000, 0x7FDE);
 let sum = 0; for (const b of rom) sum = (sum + b) & 0xFFFF;
 rom.writeUInt16LE(sum ^ 0xFFFF, 0x7FDC); rom.writeUInt16LE(sum, 0x7FDE);
 fs.writeFileSync(out, rom);
-console.log(`ROM gerada: ${out} (${rom.length} bytes, checksum ${hex4(sum)})`);
+console.log(`ROM gerada: ${out} (${rom.length} bytes, checksum ${hex4(sum)}, versao ${VERSAO})`);
