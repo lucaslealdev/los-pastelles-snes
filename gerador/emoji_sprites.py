@@ -11,6 +11,7 @@ EMOJIS = {
     'carne':    ('1f969', 0),   # corte de carne
     'queijo':   ('1f9c0', 0),
     'frango':   ('1f357', 0),   # coxa de frango
+    'catupiry': ('1f95b', 0),   # copo de leite
     'bacon':    ('1f953', 0),
     'cadeado':  ('1f512', 0),
     'raiva':    ('1f4a2', 0),

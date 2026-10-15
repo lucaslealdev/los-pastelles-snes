@@ -6,6 +6,15 @@ Lista de trabalho pendente. Antes de cada item, reler as regras do `CLAUDE.md` (
 
 - [x] **"PRACA" → "PRAÇA"** no evento `EV_FESTIVAL` (`gerador/textos.js:236`). O glifo `Ç` já existe em `gerador/fonte.js`. Procurar outras ocorrências sem cedilha/acento (`grep -rni praca gerador/ src/`) e conferir se a quebra de linha continua cabendo no card.
 
+- [ ] **Soft-lock: dia começa sem estoque de pastel.**
+  - Hoje, se o dia começa com `s_stock` = 0, o jogador é obrigado a passar o dia inteiro falhando para só então chegar à loja e comprar estoque.
+  - Correção: antes de iniciar o dia (no `ST_PREDAY` / `DayInit`), checar se há algo que impeça o dia de acontecer normalmente. Se houver, mostrar uma caixa explicando o problema (ex.: "SEM ESTOQUE DE PASTEL!") com duas opções:
+    1. voltar ao menu principal (`ST_TITLE`);
+    2. ir à loja (`ST_SHOP`) para resolver — e da loja seguir para o dia normalmente.
+  - Fazer a checagem genérica (lista de impedimentos), para incluir outros casos além do estoque. Levantar quais existem (ex.: estoque menor que o mínimo para um pedido, todos os cestos quebrados?).
+  - Cuidar do caso sem dinheiro para comprar estoque (a loja não resolveria): definir saída (ex.: estoque mínimo de emergência).
+  - Textos novos em `gerador/textos.js`, respeitando a largura das caixas; opções com `{A}`/`{CIMA}`/`{BAIXO}` e rodapé com `Footer`. Banco 0 cheio: código em outro banco.
+
 ## Melhorias
 
 Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer na ordem).
@@ -53,7 +62,22 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
 9. - [ ] **Animação de erro: pastel indo para a lixeira.** *(depende do 8)*
      - Quando a montagem falhar, mostrar o pastel caindo numa lixeira 🗑️. Mesmo método: emojis, 5 quadros-chave + morphs, reaproveitando o gerador e o player de animação do item 8.
 
-10. - [ ] **Vozes com taxa maior (mais qualidade).** *(por último: as melhorias acima adicionam CPU por quadro e mudam o orçamento do barramento)*
+10. - [ ] **Sistema de password (salvar sem SRAM).** *(depois do 4: o password aparece na loja)*
+      - **Uma única ROM.** No boot, detectar se o cartucho tem SRAM: gravar e reler dois padrões diferentes (ex.: `$55`/`$AA`) num endereço de SRAM, sem confiar em open bus, e restaurar o byte original. Guardar o resultado numa variável (ex.: `tem_sram`).
+        - **Com SRAM:** mantém carregar/salvar como hoje **e** as opções de password (carregar password e depois salvar na SRAM, ou jogo novo na SRAM e depois ver o password dele).
+        - **Sem SRAM:** só password. Esconder as opções de slot/salvar e não tentar ler/gravar SRAM.
+      - **Onde aparece:** "carregar password" no menu principal; "mostrar password" onde hoje o jogo salva (fim do dia/loja). Se o password for curto o bastante (ver abaixo), mostrá-lo sempre no rodapé do menu de compras.
+      - **Conteúdo:** o bloco `save_start`..`save_end` (~32 bytes úteis sem `s_magic`). Antes de codificar, compactar ao máximo: cada campo só com os bits do seu intervalo real (ex.: `s_fryer` 1..3 = 2 bits), limitar/arredondar campos grandes (`s_money`, `s_tot_*`) ou recalcular o que der. Pode usar o algoritmo mais pesado que couber, mesmo que a CPU demore para gerar (só roda em menu).
+      - **Verificação:** dígito(s)/glifo(s) verificador(es) (CRC ou similar) + embaralhar os bits com chave fixa (LFSR/XOR), para que trocar um caractere mude tudo e combinações aleatórias quase nunca funcionem. Incluir um número de versão do formato.
+      - **Alfabeto — decidir nesta ordem de preferência:**
+        1. **Até 8 glifos do jogo** (ex.: QUEIJO CALABRESA FRANGO QUEIJO CARNE QUEIJO QUEIJO FRANGO). Atenção: 8 símbolos de 6 sabores ≈ 20 bits, e de 16 ícones = 32 bits, muito menos que o save atual (~100+ bits mesmo compactado). Só dá se o save for reduzido a quase nada; fazer a conta antes e descartar se não couber.
+        2. **Conjunto pequeno, ex.: 16 símbolos** (hexadecimal, ou 16 ícones do jogo = 4 bits cada): mais caracteres, mas poucos botões para digitar e anotar.
+        3. **A–Z (+ dígitos)** com teclado QWERTY virtual: só se os anteriores ficarem longos demais.
+      - **Tela de digitação** (acessível pelo menu principal): teclado virtual moderno em pixel art, com as cores do jogo; com 16 símbolos, uma grade 4×4 em vez de QWERTY. Pensar na usabilidade no controle: cursor que dá a volta nas bordas, {B} apaga, {A} digita, START confirma, agrupar o código em blocos de 4 para facilitar a anotação, mensagem clara quando o password for inválido.
+      - Opções de jogo (`OPT_SRAM`) e troféus: decidir se entram no password ou ficam só na SRAM.
+      - Código em outro banco (banco 0 cheio). Teste Lua: gerar password, carregar e comparar o bloco do save; testar também o boot sem SRAM.
+
+11. - [ ] **Vozes com taxa maior (mais qualidade).** *(por último: as melhorias acima adicionam CPU por quadro e mudam o orçamento do barramento)*
       - Objetivo: subir a taxa das vozes gravadas. A música tema (`VOZ_TEMA`, 10 kHz) já está boa; **não mexer nela**.
       - **Falas em stream** (10 kHz, voz 7 / anel B): o limite é o barramento. Hoje o dia tem ~170–180 bytes/quadro de folga, e música + fala usam ~94 + 94. Para subir a fala, liberar tempo de CPU por quadro otimizando o que compete com o `Bomba` (lógica do dia, montagem de OAM, uploads na NMI, `BtnSprites`/`PillSprites`, etc.). Perfilar antes (skill `snes-otimizacao`, Mesen) para achar os maiores consumidores.
       - Outras ideias: aumentar `LOTE_MAX`, acelerar o laço do `Bomba`, dar prioridade maior à fala enquanto toca, ajustar colchões (0,5 s música / 0,15 s fala).
