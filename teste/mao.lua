@@ -1,6 +1,7 @@
 -- foto da mao ao lado do cursor (melhoria 2): pastel na mao, latinha e os dois
 local dir = (debug and debug.getinfo and (debug.getinfo(1, "S").source or ""):match("^@(.*[/\\])")) or "teste/"
 dofile(dir .. "bot.lua")
+ENDF = 1e9                      -- quem encerra e este script
 local L = {}
 for line in io.lines(dir .. "../gen/labels.txt") do
   local a, n = string.match(line, "al (%x+) %.([%w_]+)")
