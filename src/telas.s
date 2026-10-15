@@ -1055,7 +1055,7 @@ ResultsInit:
     jsr TrophyCheck
     jsr HistPush
     stz r_page
-    jsr DrawResults
+    jsl DrawResults         ; banco 28
     A16
     inc s_day
     A8
@@ -1158,118 +1158,6 @@ LevelUp:
     inc r_levels
     bra @lp
 @done:
-    rts
-
-DrawResults:
-    .a8
-    .i16
-    PRINT TXT_R_FIM, 3, 3, 5
-    PRINTNUM16 s_day, 14, 3, 5, 3
-    PRINT TXT_R_CLI, 3, 5, 4
-    PRINTNUM8 d_served, 22, 5, 4, 3
-    PRINT TXT_HUD_BAR, 25, 5, 4
-    PRINTNUM8 d_total, 26, 5, 4, 2
-    PRINT TXT_R_PERF, 3, 6, 4
-    PRINTNUM8 d_perfect, 25, 6, 4, 3
-    PRINT TXT_R_DESP, 3, 7, 4
-    PRINTNUM8 d_waste, 25, 7, 4, 3
-    lda s_level
-    cmp #TEL_LV
-    bcc :+
-    PRINT TXT_R_ENTR, 3, 8, 7
-    PRINTNUM8 d_deliv, 14, 8, 7, 3
-    PRINT TXT_R_RS, 19, 8, 7
-    PRINTNUM16 d_dvsales, 22, 8, 7, 6
-:   PRINT TXT_R_VEND, 3, 9, 4
-    PRINT TXT_R_RS, 19, 9, 4
-    PRINTNUM16 d_sales, 22, 9, 4, 6
-    PRINT TXT_R_GORJ, 3, 10, 4
-    PRINT TXT_R_RS, 19, 10, 4
-    PRINTNUM16 d_tips, 22, 10, 4, 6
-    PRINT TXT_R_OUTR, 3, 11, 4
-    PRINT TXT_R_RS, 19, 11, 4
-    PRINTNUM16 r_other, 22, 11, 4, 6
-    PRINT TXT_R_ALUG, 3, 12, 5
-    PRINT TXT_R_MRS, 18, 12, 5
-    PRINTNUM16 r_rent, 22, 12, 5, 6
-    PRINT TXT_R_SAL, 3, 13, 5
-    PRINT TXT_R_MRS, 18, 13, 5
-    PRINTNUM16 r_salary, 22, 13, 5, 6
-    ; lucro ou prejuizo
-    A16
-    lda r_profit
-    bmi @neg
-    A8
-    PRINT TXT_R_LUCRO, 3, 15, 6
-    PRINT TXT_R_RS, 19, 15, 6
-    PRINTNUM16 r_profit, 22, 15, 6, 6
-    bra @cx
-@neg:
-    .a16
-    eor #$FFFF
-    inc a
-    sta r_profit
-    A8
-    PRINT TXT_R_PREJ, 3, 15, 5
-    PRINT TXT_R_MRS, 18, 15, 5
-    PRINTNUM16 r_profit, 22, 15, 5, 6
-@cx:
-    PRINT TXT_R_CAIXA, 3, 17, 7
-    PRINT TXT_R_RS, 19, 17, 7
-    A16
-    lda s_money
-    sta num
-    lda s_money+2
-    sta num+2
-    A8
-    ldx #(17*32+21)
-    stx txt_pos
-    lda #((7<<2)|$20)
-    sta txt_attr
-    lda #7
-    sta num_w
-    jsr PrintNum
-    PRINT TXT_R_REP, 3, 18, 4
-    PRINTNUM8 s_rep, 22, 18, 4, 3
-    PRINT TXT_R_100, 25, 18, 4
-    PRINT TXT_R_NIVEL, 3, 19, 4
-    PRINTNUM8 s_level, 9, 19, 4, 2
-    PRINT TXT_R_XP, 13, 19, 4
-    PRINTNUM16 s_xp, 16, 19, 4, 5
-    PRINT TXT_HUD_BAR, 21, 19, 4
-    jsr XpNeed
-    PRINTNUM16 tmp, 22, 19, 4, 4
-    lda r_levels
-    beq :+
-    PRINT TXT_R_SUBIU, 3, 20, 6
-:   lda r_bossres
-    bne :+
-    lda r_duel
-    beq @nob
-:
-    cmp #1
-    bne :+
-    PRINT TXT_R_META_OK, 3, 21, 6
-    bra @nob
-:   PRINT TXT_R_META_NO, 3, 21, 5
-@nob:
-    PRINT TXT_R_MISSAO, 3, 22, 7
-    A16
-    lda s_mission
-    and #$00FF
-    asl a
-    tax
-    lda MissionTxt,x
-    tax
-    A8
-    ldy #(23*32+3)
-    sty txt_pos
-    lda #((6<<2)|$20)
-    sta txt_attr
-    jsr PrintStr
-    ldx #TXT_R_CONT
-    lda #26
-    jsr Footer
     rts
 
 ResultsUpdate:

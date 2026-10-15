@@ -87,12 +87,317 @@ CardRodape:
     FAR0 Footer
     rtl
 
+; ---------------------------------------------------------------- fim do dia (resultado)
+; Pagina 1 do resultado: um icone emoji no lugar de cada rotulo (folha
+; gen/icon_res_*, carregada nos tiles OBJ 0-95 como os icones da loja).
+; Coluna da esquerda: entradas (verde); da direita: saidas (vermelho).
+; Icones centrados na linha do texto (y = linha*8 - 4), como na loja.
+ICR_DIA    = 0              ; ordem de ICONES_RES em gerador/icones.py
+ICR_CLI    = 1
+ICR_PERF   = 2
+ICR_LIXO   = 3
+ICR_ENTR   = 4
+ICR_VEND   = 5
+ICR_GORJ   = 6
+ICR_UNID   = 7
+ICR_ALUG   = 8
+ICR_SAL    = 9
+ICR_LUCRO  = 10
+ICR_PREJ   = 11
+ICR_CAIXA  = 12
+ICR_REP    = 13
+ICR_NIVEL  = 14
+ICR_XP     = 15
+ICR_SUBIU  = 16
+ICR_DESAF  = 17
+ICR_FALHOU = 18
+ICR_MISSAO = 19
+ICR_GRAF   = 20
+ICR_MELHOR = 21
+RES_XE = 20                 ; x do icone da coluna esquerda (texto na coluna 5)
+RES_XD = 124                ; x do icone da coluna direita (texto na coluna 18)
+
+; posicao e paleta do proximo texto (TxtEsq/NumEsq avancam a posicao)
+.macro RPOS col, row, pal
+    ldx #((row)*32+(col))
+    stx txt_pos
+    lda #(((pal)<<2)|$20)
+    sta txt_attr
+.endmacro
+.macro RTXT str
+    ldx #str
+    jsr TxtEsq
+.endmacro
+.macro RNUM8 var
+    A16
+    lda var
+    and #$00FF
+    sta num
+    stz num+2
+    A8
+    jsr NumEsq
+.endmacro
+.macro RNUM16 var
+    A16
+    lda var
+    sta num
+    stz num+2
+    A8
+    jsr NumEsq
+.endmacro
+.macro RICO ico, xx, row
+    lda #ico
+    ldx #xx
+    ldy #((row)*8-4)
+    jsr IcoRes
+.endmacro
+
+DrawResults:
+    .a8
+    .i16
+    ; folha de icones do resultado (a tela esta desligada)
+    ldx #VRAM_OBJ
+    stx VMADDL
+    ldx #.loword(IconResGfx)
+    stx dma_src
+    lda #^IconResGfx
+    sta dma_src+2
+    ldx #(IconResGfx_end - IconResGfx)
+    stx dma_len
+    FAR0 DmaVram
+    ldx #.loword(IconResPal)
+    stx dma_src
+    lda #^IconResPal
+    sta dma_src+2
+    ldx #(176*2)            ; paletas OBJ 3..6
+    ldy #128
+    FAR0 CopyPal
+    FAR0 OamClear
+    ; titulo
+    RICO ICR_DIA, RES_XE, 3
+    RPOS 5, 3, 5
+    RTXT TXT_R_FIM
+    RNUM16 s_day
+    ; o dia: clientes, perfeitos, desperdicio e entregas
+    RICO ICR_CLI, RES_XE, 6
+    RPOS 5, 6, 4
+    RNUM8 d_served
+    RTXT TXT_HUD_BAR
+    RNUM8 d_total
+    RICO ICR_PERF, RES_XD, 6
+    RPOS 18, 6, 4
+    RNUM8 d_perfect
+    RICO ICR_LIXO, RES_XE, 8
+    RPOS 5, 8, 4
+    RNUM8 d_waste
+    lda s_level
+    cmp #TEL_LV
+    bcc @noent
+    RICO ICR_ENTR, RES_XD, 8
+    RPOS 18, 8, 7
+    RNUM8 d_deliv
+    RTXT TXT_R_ENTR
+    RNUM16 d_dvsales
+@noent:
+    ; entradas
+    RICO ICR_VEND, RES_XE, 11
+    RPOS 5, 11, 6
+    RTXT TXT_R_MAIS
+    RNUM16 d_sales
+    RICO ICR_GORJ, RES_XE, 13
+    RPOS 5, 13, 6
+    RTXT TXT_R_MAIS
+    RNUM16 d_tips
+    A16
+    lda r_other             ; sem outras lojas/franquias: nem mostra
+    A8
+    beq @nooutr
+    RICO ICR_UNID, RES_XE, 15
+    RPOS 5, 15, 6
+    RTXT TXT_R_MAIS
+    RNUM16 r_other
+@nooutr:
+    ; saidas
+    RICO ICR_ALUG, RES_XD, 11
+    RPOS 18, 11, 5
+    RTXT TXT_R_MENOS
+    RNUM16 r_rent
+    A16
+    lda r_salary            ; sem atendente nem motoboy: nem mostra
+    A8
+    beq @nosal
+    RICO ICR_SAL, RES_XD, 13
+    RPOS 18, 13, 5
+    RTXT TXT_R_MENOS
+    RNUM16 r_salary
+@nosal:
+    ; lucro ou prejuizo do dia e caixa
+    A16
+    lda r_profit
+    bmi @neg
+    A8
+    RICO ICR_LUCRO, RES_XE, 18
+    RPOS 5, 18, 6
+    RTXT TXT_R_MAIS
+    bra @lucro
+@neg:
+    .a16
+    eor #$FFFF
+    inc a
+    sta r_profit
+    A8
+    RICO ICR_PREJ, RES_XE, 18
+    RPOS 5, 18, 5
+    RTXT TXT_R_MENOS
+@lucro:
+    RNUM16 r_profit
+    RICO ICR_CAIXA, RES_XD, 18
+    RPOS 18, 18, 7
+    RTXT TXT_R_RS
+    A16
+    lda s_money
+    sta num
+    lda s_money+2
+    sta num+2
+    A8
+    jsr NumEsq
+    ; reputacao, nivel (confete se subiu) e experiencia
+    RICO ICR_REP, RES_XE, 20
+    RPOS 5, 20, 4
+    RNUM8 s_rep
+    RTXT TXT_R_100
+    RICO ICR_NIVEL, RES_XD, 20
+    lda r_levels
+    beq @nv
+    RPOS 18, 20, 6
+    RNUM8 s_level
+    RICO ICR_SUBIU, 164, 20  ; ao lado do numero (ate 2 digitos)
+    bra @xp
+@nv:
+    RPOS 18, 20, 4
+    RNUM8 s_level
+@xp:
+    RICO ICR_XP, RES_XE, 22
+    RPOS 5, 22, 4
+    RNUM16 s_xp
+    RTXT TXT_HUD_BAR
+    FAR0 XpNeed
+    RNUM16 tmp
+    ; desafio do dia (chefe ou duelo)
+    lda r_bossres
+    bne :+
+    lda r_duel
+    beq @nob
+:   cmp #1
+    bne @falhou
+    RICO ICR_DESAF, RES_XD, 22
+    RPOS 18, 22, 6
+    RTXT TXT_R_META_OK
+    bra @nob
+@falhou:
+    RICO ICR_FALHOU, RES_XD, 22
+    RPOS 18, 22, 5
+    RTXT TXT_R_META_NO
+@nob:
+    ; missao atual (ate 24 letras: build.js confere)
+    RICO ICR_MISSAO, RES_XE, 24
+    RPOS 5, 24, 6
+    A16
+    lda s_mission
+    and #$00FF
+    asl a
+    tax
+    lda MissionTxt,x
+    tax
+    A8
+    jsr TxtEsq
+    ldx #TXT_R_CONT
+    lda #26
+    FAR0 Footer
+    rtl
+
+; X = texto (banco 0): imprime em txt_pos/txt_attr e avanca txt_pos
+TxtEsq:
+    .a8
+    .i16
+    FAR0 PrintStr
+    A16
+    txa                     ; PrintStr termina com X = 2 * proxima posicao
+    lsr a
+    sta txt_pos
+    A8
+    rts
+
+; num (32 bits) alinhado a esquerda (sem espacos) em txt_pos; avanca txt_pos
+NumEsq:
+    .a8
+    .i16
+    FAR0 NumConv
+    ldx #0
+@z: lda numdig,x            ; pula os zeros a esquerda (fica ao menos um digito)
+    bne @c
+    cpx #7
+    beq @c
+    inx
+    bra @z
+@c: ldy #0
+@cp:
+    lda numdig,x
+    clc
+    adc #FONT_0
+    sta numstr,y
+    iny
+    inx
+    cpx #8
+    bne @cp
+    lda #$FF
+    sta numstr,y
+    ldx #numstr
+    bra TxtEsq
+
+; icone A da folha do resultado em (X, Y)
+IcoRes:
+    .a8
+    .i16
+    stx spr_x
+    pha
+    tya
+    sta spr_y
+    pla
+    A16
+    and #$00FF
+    tax
+    A8
+    lda f:IconResPalTab,x
+    asl a
+    ora #$30
+    sta spr_attr
+    txa                     ; tile = (i % 8) * 2 + (i / 8) * 32
+    and #$07
+    asl a
+    sta spr_tile
+    txa
+    and #$F8
+    asl a
+    asl a
+    clc
+    adc spr_tile
+    sta spr_tile
+    stz spr_tile+1
+    lda #1
+    sta spr_size
+    FAR0 AddSprite
+    stz spr_size
+    rts
+
 ; ---------------------------------------------------------------- grafico de lucro (resultado)
 DrawChart:
     .a8
     .i16
     FAR0 ClearBg3
-    PRINT0 TXT_G_TIT, 3, 3, 5
+    FAR0 OamClear
+    RICO ICR_GRAF, RES_XE, 3
+    PRINT0 TXT_G_TIT, 5, 3, 5
     lda hist_n
     bne :+
     PRINT0 TXT_G_VAZIO, 3, 10, 4
@@ -236,9 +541,11 @@ DrawChart:
     inc loop_i
     jmp @bar
 @foot:
-    PRINT0 TXT_G_MELHOR, 3, 24, 6
-    PRINT0 TXT_G_RS, 10, 24, 6
-    PRINTNUM16_0 tmp4, 13, 24, 6, 5
+    ; melhor dia
+    RICO ICR_MELHOR, RES_XE, 24
+    RPOS 5, 24, 6
+    RTXT TXT_R_RS
+    RNUM16 tmp4
     ldx #TXT_R_CONT
     lda #26
     FAR0 Footer
@@ -376,3 +683,9 @@ MaoItem:
     sta spr_x
     A8
     rts
+
+; folha de icones da tela de fim do dia (gerador/icones.py, ICONES_RES)
+IconResGfx: .incbin "gen/icon_res_tiles.bin"
+IconResGfx_end:
+IconResPal: .incbin "gen/icon_res_pal.bin"
+.include "gen/icon_res_pal.inc"

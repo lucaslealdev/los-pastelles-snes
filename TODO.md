@@ -38,7 +38,8 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Novo sprite: só a mão. Conferir em `game.s` quais estados de "mão" existem de fato. Preferir junto ao cursor (fixo na HUD seria refeito no item 8).
      - **Banco 0 está cheio** (hoje ~390 bytes livres no fim do RODATA, mas reservados): o código novo vai para o banco 28 (`src/banco28.s`, `JSL`/`RTL`, chamando o banco 0 com `FAR0`). Se precisar de bytes no banco 0, mover outra rotina grande para lá, como foi feito com `DrawChart`. Os sabores 8×8 já existem (`SPR_MINI` + sabor, tiles consecutivos).
 
-3. - [ ] **Tela de fim do dia (resultados) modernizada.**
+3. - [x] **Tela de fim do dia (resultados) modernizada.**
+     - Feito: `DrawResults` foi para o banco 28 e usa uma segunda folha de emojis (`ICONES_RES` em `gerador/icones.py`); só sobraram texto no título, no desafio e na missão. Gráfico com 📊 e 🥇. Fotos: `teste/resultado.lua` e `teste/resultado_cheio.lua`.
      - Usar emojis no lugar de rótulos e cortar texto sempre que um ícone + número bastar.
      - Tela isolada, fora do dia (sem disputa de sprites com clientes); usa os ícones emoji já existentes (`IconeSprite`/`ICO_*`).
 
