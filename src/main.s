@@ -922,6 +922,10 @@ LoadBasePalettes:
     PAL_LOAD SprPal, 128, 256
     rts
 
+; destino do RTS das rotinas do banco 0 chamadas com FAR0 (macros.inc)
+Rtl0:
+    rtl
+
 .include "src/audio.s"
 .include "src/voz.s"
 .include "src/game.s"
@@ -930,6 +934,7 @@ LoadBasePalettes:
 .include "src/segredo.s"
 .include "src/ui.s"
 .include "src/demo.s"
+.include "src/banco28.s"
 
 ; ---------------------------------------------------------------- dados
 .segment "RODATA"

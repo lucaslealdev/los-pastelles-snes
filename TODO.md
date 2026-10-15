@@ -6,7 +6,7 @@ Lista de trabalho pendente. Antes de cada item, reler as regras do `CLAUDE.md` (
 
 - [x] **"PRACA" → "PRAÇA"** no evento `EV_FESTIVAL` (`gerador/textos.js:236`). O glifo `Ç` já existe em `gerador/fonte.js`. Procurar outras ocorrências sem cedilha/acento (`grep -rni praca gerador/ src/`) e conferir se a quebra de linha continua cabendo no card.
 
-- [ ] **Soft-lock: dia começa sem estoque de pastel.**
+- [x] **Soft-lock: dia começa sem estoque de pastel.** Feito: `DiaBloqueado` (`src/banco28.s`) no início de `PreDayInit`; carta `SEMESTOQUE` com {A} loja / {B} menu; sem dinheiro para o estoque, o mestre dá 10 porções (carta `FALIU`). Novos impedimentos entram em `DiaBloqueado`.
   - Hoje, se o dia começa com `s_stock` = 0, o jogador é obrigado a passar o dia inteiro falhando para só então chegar à loja e comprar estoque.
   - Correção: antes de iniciar o dia (no `ST_PREDAY` / `DayInit`), checar se há algo que impeça o dia de acontecer normalmente. Se houver, mostrar uma caixa explicando o problema (ex.: "SEM ESTOQUE DE PASTEL!") com duas opções:
     1. voltar ao menu principal (`ST_TITLE`);
@@ -14,6 +14,8 @@ Lista de trabalho pendente. Antes de cada item, reler as regras do `CLAUDE.md` (
   - Fazer a checagem genérica (lista de impedimentos), para incluir outros casos além do estoque. Levantar quais existem (ex.: estoque menor que o mínimo para um pedido, todos os cestos quebrados?).
   - Cuidar do caso sem dinheiro para comprar estoque (a loja não resolveria): definir saída (ex.: estoque mínimo de emergência).
   - Textos novos em `gerador/textos.js`, respeitando a largura das caixas; opções com `{A}`/`{CIMA}`/`{BAIXO}` e rodapé com `Footer`. Banco 0 cheio: código em outro banco.
+
+- [ ] **Acentos faltando em textos.** Ex.: "LUCRO DOS ULTIMOS DIAS" (ÚLTIMOS), carta `EV_CRITICO` ("CRITICO GASTRONOMICO" → CRÍTICO GASTRONÔMICO). Revisar todo `gerador/textos.js` procurando palavras sem acento.
 
 ## Melhorias
 
@@ -29,7 +31,7 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Objetivo: o jogador não precisar lembrar o que pegou nem qual pastel é qual (ex.: "pastel de queijo na mão").
      - Atualizar sempre que a mão mudar (pegar, montar, entregar, descartar); mão vazia não mostra nada (ou mão aberta vazia).
      - Novo sprite: só a mão. Conferir em `game.s` quais estados de "mão" existem de fato. Preferir junto ao cursor (fixo na HUD seria refeito no item 7).
-     - **Banco 0 está cheio** (~1 byte livre após o item 1): o código novo vai para outro banco (`JSL`/`RTL`) ou é preciso liberar espaço no banco 0 antes. Os sabores 8×8 já existem (`SPR_MINI` + sabor, tiles consecutivos).
+     - **Banco 0 está cheio** (~1 byte livre após o item 1): o código novo vai para o banco 28 (`src/banco28.s`, `JSL`/`RTL`, chamando o banco 0 com `FAR0`). Se precisar de bytes no banco 0, mover outra rotina grande para lá, como foi feito com `DrawChart`. Os sabores 8×8 já existem (`SPR_MINI` + sabor, tiles consecutivos).
 
 3. - [ ] **Tela de fim do dia (resultados) modernizada.**
      - Usar emojis no lugar de rótulos e cortar texto sempre que um ícone + número bastar.

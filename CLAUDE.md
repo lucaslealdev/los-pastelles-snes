@@ -132,7 +132,7 @@ The generator modules:
 
 ### ROM layout
 `src/snes.cfg` maps LoROM SlowROM with 32 banks of 32 KB (1 MB). The header in `main.s` says 1 MB and 2 KB of battery SRAM. Banks 13 and up hold the recorded audio (`gen/sons.inc`, generated; currently up to bank 27).
-- `src/main.s` is the single translation unit. It `.include`s `macros.inc`, `gen/assets.inc`, `vars.inc`, then `audio.s`, `voz.s`, `game.s`, `telas.s`, `extra.s`, `segredo.s` and `ui.s` (all in the `CODE` segment, bank 0), then the data. Graphics go in the `BANK1`–`BANK12` segments, roughly one scene group per bank. The banks are 32 KB, so watch for overflow when art grows.
+- `src/main.s` is the single translation unit. It `.include`s `macros.inc`, `gen/assets.inc`, `vars.inc`, then `audio.s`, `voz.s`, `game.s`, `telas.s`, `extra.s`, `segredo.s`, `ui.s`, `demo.s` and `banco28.s` (in the `CODE` segment, bank 0, except the `BANK28` parts of `demo.s` and all of `banco28.s`), then the data. Graphics go in the `BANK1`–`BANK12` segments, roughly one scene group per bank. The banks are 32 KB, so watch for overflow when art grows.
 - Register convention: **A is 8-bit, X/Y are 16-bit, DBR = $80, D = $0000**. Switch widths with the `A8`/`A16`/`I8`/`I16` macros so that the assembler's `.a8`/`.a16` tracking stays correct.
 - `gerador/checa_largura.py` runs on every build and flags branches or jumps whose target label was assembled under a different accumulator width. Treat its "problemas: N>0" output as a real bug.
 
@@ -204,6 +204,9 @@ Menu screens (`LoadMenuScene`) show a 2-layer background:
 
 `UiNmi` scrolls BG2 1 px to the right every 2 frames and turns BG2 on in `TM` while `ui_mode` is `UI_PANEL` (boxes) or `UI_TITULO` (title). Every other scene uses BG1 only.
 
+### Day blockers
+`PreDayInit` first calls `DiaBloqueado` (`banco28.s`). If something prevents a normal day it queues a card and returns C=1 instead of starting the day. Today the only blocker is no pastel stock (unless `VENTO_BIT`): with money for stock (R$ 30) it shows `CARD_SEMESTOQUE` ({A} goes to the shop, {B} back to the title, via `CardBotaoB`/`CardRodape`); without, the master gives 10 portions (`CARD_FALIU`) and the day starts. New blockers go in `DiaBloqueado`.
+
 ### Guided tutorial (first order of day 1)
 While `tut_step != $FF` (tutorial active; see `TUT_BIT` in `s_tflags` for "already completed"), the player can't get the first order wrong:
 - **Customer:** `DaySpawn` sends a single customer, who orders meat (no double order, combo, tourist or mystery customer). `CustUpdate` doesn't drop their patience.
@@ -244,7 +247,7 @@ Mesen passing is not proof that the game works on a console. These bugs reached 
 - **Use relative links in docs.** Absolute links to a fork's releases break in the original repo and in other forks.
 - **Long or blocking work shouldn't freeze the screen.** Start dependent features when the prerequisite finishes (e.g. the title song waits for the fixed-voice load) instead of blocking the main loop.
 - **Progress that must survive leaving mid-way is saved at the moment it happens** (e.g. the tutorial bit goes straight to SRAM on the first delivery).
-- **Bank 0 is full.** New sizeable routines go to another bank with `JSL`/`RTL`, and can only call routines in the same bank.
+- **Bank 0 is full.** New sizeable routines go to `src/banco28.s` (segment `BANK28`), called with `JSL` and returning with `RTL`. From there, call bank-0 routines (which end in `RTS`) with the `FAR0` macro (`macros.inc`): it pushes a return through `Rtl0` in bank 0. `PRINT0`/`PRINTNUM16_0` are the `FAR0` versions of `PRINT`/`PRINTNUM16`. Text strings (`TXT_*`) still live in bank 0. To free bank-0 bytes, move a big routine with few callers there (as done with `DrawChart`).
 - **Keep CI dependencies current.** Update GitHub Actions before their runtime is deprecated.
 
 ### Other folders
