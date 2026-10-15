@@ -284,3 +284,95 @@ ChartCell:
     ply
     rts
 
+
+; ---------------------------------------------------------------- mao do jogador
+; Ao lado do cursor: mao (emoji) com o que o jogador segura em cima dos dedos
+; (sabor 8x8 do pastel pronto e/ou a latinha do combo). Mao vazia nao mostra nada.
+; Chamado por DayDraw logo depois do cursor: spr_x/spr_y ainda sao os do cursor
+; (com a balancada), entao a mao acompanha o movimento. Termina com spr_size = 1.
+MAO_DX = 11                 ; canto da mao em relacao ao cursor
+MAO_DY = 3
+MaoSprites:
+    .a8
+    .i16
+    lda hold_flav
+    cmp #$FF
+    bne @tem
+    lda hold_soda
+    bne @tem
+    rtl
+@tem:
+    A16
+    lda spr_x
+    clc
+    adc #MAO_DX
+    sta spr_x
+    A8
+    lda spr_y
+    clc
+    adc #MAO_DY
+    sta spr_y
+    lda #$30
+    sta spr_attr
+    stz spr_size
+    ; itens antes da mao (slot menor fica na frente)
+    lda hold_flav
+    cmp #$FF
+    beq @soda
+    clc
+    adc #<SPR_MINI
+    sta spr_tile
+    lda #>SPR_MINI
+    adc #0
+    sta spr_tile+1
+    lda #7                  ; sabor sobre as pontas dos dedos
+    ldy #$FFFB
+    jsr MaoItem
+@soda:
+    lda hold_soda
+    beq @mao
+    A16
+    lda #SPR_REFRI_P
+    sta spr_tile
+    A8
+    lda #1                  ; latinha sobre o polegar
+    ldy #$FFFC
+    jsr MaoItem
+@mao:
+    A16
+    lda #SPR_MAO
+    sta spr_tile
+    A8
+    lda #1
+    sta spr_size
+    FAR0 AddSprite
+    rtl
+
+; sprite 8x8 em (mao + A, mao + Y), sem mexer na posicao da mao
+MaoItem:
+    .a8
+    .i16
+    sta tmp
+    A16
+    lda spr_x
+    pha
+    lda tmp
+    and #$00FF
+    clc
+    adc spr_x
+    sta spr_x
+    A8
+    lda spr_y
+    pha
+    tya
+    clc
+    adc spr_y
+    sta spr_y
+    FAR0 AddSprite
+    pla
+    sta spr_y
+    A16
+    pla
+    sta spr_x
+    A8
+    rts

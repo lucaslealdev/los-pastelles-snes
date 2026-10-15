@@ -36,7 +36,7 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 - Reforma do salão em 2 etapas (vitrine com pastéis no balcão; depois loja premium com bandeirinhas, flores e letreiro dourado) e novos itens: freezer, ar-condicionado, música ambiente e uniforme. A lista da loja rola (setas ↑↓).
 - Entregas (nível 6+): o telefone toca, aperte **Y** para anotar a comanda; com o pastel na mão, **Y** de novo para pôr no saco do motoboy (pastel + taxa de R$ 4). Na loja: **Computador (app)** no nível 13 (pedidos entram sozinhos, alguns com 2-3 pastéis) e **Motoboy extra** (prazo maior e taxa de R$ 6).
 - Animações: bolhas no óleo, moeda voando até o caixa, Fundador comemorando e clientes andando.
-- 6 sabores (carne, queijo, frango + calabresa, catupiry, bacon desbloqueáveis).
+- 6 sabores (carne, queijo, frango + calabresa, requeijão cremoso, bacon desbloqueáveis).
 - Personagens: Fundador, Mestre da Massa, Gerente, Concorrente e Cliente Misterioso.
 - 5 capítulos e 4 desafios: Hora do Almoço, Desafio do Sabor, Cozinha em Crise, Expansão Nacional.
 - 15 missões, níveis/XP, reputação, eventos (feira, promoção do concorrente).

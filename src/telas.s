@@ -1329,7 +1329,7 @@ ResultsUpdate:
 :   lda r_oldlvl
     cmp #6
     bne :+
-    lda #CARD_UN_CATUP
+    lda #CARD_UN_REQUEIJAO
     jsr CardAdd
     lda #CARD_UN_ATEND
     jsr CardAdd

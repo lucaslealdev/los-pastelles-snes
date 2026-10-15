@@ -544,7 +544,7 @@ function icon(name) {
       I.ell(1, 3, 9, 11, R); I.ell(2, 4, 8, 10, r); [[4, 6], [6, 8], [5, 9]].forEach(([x, yy]) => I.set(x, yy, p));
       I.ell(7, 2, 14, 9, R); I.ell(8, 3, 13, 8, r); [[10, 4], [11, 6], [9, 6]].forEach(([x, yy]) => I.set(x, yy, p));
       I.outline(k); break;
-    case 'catupiry':
+    case 'requeijao':
       I.ell(2, 8, 13, 12, w); I.ell(4, 5, 11, 9, w); I.ell(6, 2, 9, 6, w);
       I.hline(3, 11, 10, g); I.hline(5, 8, 6, g); I.set(7, 5, g);
       I.outline(k); break;
@@ -561,6 +561,8 @@ function icon(name) {
       I.rect(1, 1, 14, 11, w); I.set(1, 1, 0); I.set(14, 1, 0); I.set(1, 11, 0); I.set(14, 11, 0);
       I.rect(6, 12, 4, 1, w); I.rect(7, 13, 2, 1, w);
       I.outline(k); break;
+    case 'mao':
+      I.ell(1, 6, 14, 12, y); I.rect(2, 3, 3, 5, y); I.outline(k); break;
     case 'cursor':
       I.rect(5, 1, 6, 5, y); for (let t = 0; t < 5; t++) I.hline(2 + t, 6 + t, 12 - t * 2, y);
       I.vline(6, 1, 6, w); I.outline(k); break;
@@ -776,12 +778,12 @@ function buildSprites(emojis = {}) {
   const portImg = new Img(128, 32);
   PORT_SPECS.forEach((sp, i) => { portImg.paste(person(sp), i * 32, 0); ids[`PORT_${i}`] = i * 4; });
   const minis = [];
-  ['carne', 'queijo', 'frango', 'calabresa', 'catupiry', 'bacon'].forEach((n, i) => {
+  ['carne', 'queijo', 'frango', 'calabresa', 'requeijao', 'bacon'].forEach((n, i) => {
     const im = emo(n, () => icon(n));
     put(`ICON_${i}`, im, 0); minis.push(mini(im));
   });
   put('MASCOTE_0', mascote(false), 1); put('MASCOTE_1', mascote(true), 1);
-  for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'loja', 'franquia', 'estrela', 'refri']) put(n.toUpperCase(), emo(n, () => icon(n)), 0);
+  for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'loja', 'franquia', 'estrela', 'refri', 'mao']) put(n.toUpperCase(), emo(n, () => icon(n)), 0);
   put('REFRI_P', refriP(), 0);
   { const b = new Img(8, 8); b.ell(1, 1, 6, 6, 13); b.ell(2, 2, 5, 5, 0); b.set(2, 2, 13); put('BOLHA', b, 1); }
   for (const b of ['U', 'D', 'L', 'R', 'A', 'B', 'X', 'Y', 'OK']) put('BTN_' + b, botao(b), 0);

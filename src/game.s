@@ -2718,6 +2718,7 @@ DayDraw:
     lda #1
     sta spr_size
     jsr AddSprite
+    jsl MaoSprites          ; mao ao lado do cursor com o que o jogador segura
     ; item na mao (no rodape e acima do fundador)
     lda hold_flav
     cmp #$FF

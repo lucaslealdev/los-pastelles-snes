@@ -26,12 +26,13 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Reaproveitar os sprites de sabor de `emoji_sprites.py`; some quando o cesto esvazia. Atenção ao limite de sprites por linha com vários cestos lado a lado (pode valer usar ícone 8×8 em vez de 16×16).
      - Vem primeiro porque é o menor e cria a rotina "desenhar ícone de sabor" que o item 2 reaproveita.
 
-2. - [ ] **Indicador visual do que está na mão do jogador.** *(depende do 1)*
+2. - [x] **Indicador visual do que está na mão do jogador.** *(depende do 1)*
+     - Feito: `MaoSprites` (`src/banco28.s`), chamada pelo `DayDraw` logo após o cursor. Mão 🫴 (`SPR_MAO`) à direita do cursor, balançando com ele, com o sabor 8×8 do pastel e/ou a latinha do combo sobre os dedos; mão vazia não mostra nada. A HUD continua mostrando o item no rodapé. Foto de conferência: `teste/mao.lua`.
      - Mostrar um emoji de mão (✋/🫴) combinado com o emoji do que foi pego — sabor do recheio (🥩 🧀 🍗 🥓 etc.) ou pastel pronto do sabor X.
      - Objetivo: o jogador não precisar lembrar o que pegou nem qual pastel é qual (ex.: "pastel de queijo na mão").
      - Atualizar sempre que a mão mudar (pegar, montar, entregar, descartar); mão vazia não mostra nada (ou mão aberta vazia).
-     - Novo sprite: só a mão. Conferir em `game.s` quais estados de "mão" existem de fato. Preferir junto ao cursor (fixo na HUD seria refeito no item 7).
-     - **Banco 0 está cheio** (~1 byte livre após o item 1): o código novo vai para o banco 28 (`src/banco28.s`, `JSL`/`RTL`, chamando o banco 0 com `FAR0`). Se precisar de bytes no banco 0, mover outra rotina grande para lá, como foi feito com `DrawChart`. Os sabores 8×8 já existem (`SPR_MINI` + sabor, tiles consecutivos).
+     - Novo sprite: só a mão. Conferir em `game.s` quais estados de "mão" existem de fato. Preferir junto ao cursor (fixo na HUD seria refeito no item 8).
+     - **Banco 0 está cheio** (hoje ~390 bytes livres no fim do RODATA, mas reservados): o código novo vai para o banco 28 (`src/banco28.s`, `JSL`/`RTL`, chamando o banco 0 com `FAR0`). Se precisar de bytes no banco 0, mover outra rotina grande para lá, como foi feito com `DrawChart`. Os sabores 8×8 já existem (`SPR_MINI` + sabor, tiles consecutivos).
 
 3. - [ ] **Tela de fim do dia (resultados) modernizada.**
      - Usar emojis no lugar de rótulos e cortar texto sempre que um ícone + número bastar.
@@ -49,22 +50,28 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
 6. - [ ] **Cenário da loja com emojis.**
      - Substituir desenhos simples de `gerador/arte.js` por arte partindo de emojis ajustados à interface — por exemplo (mas não só): chef 🧑‍🍳, vaso de planta 🪴, janela 🪟. Revisar o cenário inteiro procurando outros elementos candidatos.
      - São 5 bairros × 3 reformas (`shopScene`); atenção a paleta e tamanho de banco.
-     - Antes da HUD (item 7) porque a HUD nova deve combinar com o cenário novo.
+     - Antes da HUD (item 8) porque a HUD nova deve combinar com o cenário novo.
 
-7. - [ ] **HUD do dia mais moderno.** *(depois do 2 e do 6)*
+7. - [ ] **Mapa da expansão redesenhado.**
+     - Refazer a arte do mapa (`mapScene` em `gerador/arte.js`, tela `ST_MAP`) com mais qualidade: visual moderno de 16 bits, sem cara de desenho de Paint feito por criança.
+     - Usar emojis (Twemoji, como o resto do projeto) para os elementos do mapa (lojas, franquias, prédios, árvores, rios, estradas etc.).
+     - Antes de desenhar, gerar com o Gemini uma arte conceitual em pixel art 16 bits como referência de composição, cores e estilo; a arte final continua gerada por código em `gerador/`.
+     - Atenção à paleta (BG em 4bpp, 15 cores por paleta) e ao tamanho do banco onde o mapa fica.
+
+8. - [ ] **HUD do dia mais moderno.** *(depois do 2, do 6 e do 7)*
      - Trocar a HUD atual por balões (estilo do balão do tutorial / pílula), ícones de emoji (moeda, relógio, estrela etc.) e texto estilizado.
      - Cuidado com o limite de 32 sprites / 34 tiles por linha durante o jogo e com as paletas de sprite 3–7, que são dos clientes. Reservar espaço/sprites para os indicadores dos itens 1 e 2.
 
-8. - [ ] **Animação grande da montagem do pastel (minigame).**
+9. - [ ] **Animação grande da montagem do pastel (minigame).**
      - Pelo menos 5 quadros-chave da montagem (massa → recheio → dobra → fechamento → pastel pronto), exibidos grandes na tela.
-     - Cada acerto de botão sorteado avança a animação; errar desvia para o desfecho de erro (item 9).
+     - Cada acerto de botão sorteado avança a animação; errar desvia para o desfecho de erro (item 10).
      - Arte baseada em emojis/glyphs da internet (Twemoji, como o resto do projeto), com quadros intermediários gerados por morph entre os quadros-chave para suavizar o movimento.
-     - Gerar tudo por script em `gerador/` (como `emoji_sprites.py`); verificar espaço em banco/VRAM. Montar o gerador de morph de forma reutilizável para o item 9.
+     - Gerar tudo por script em `gerador/` (como `emoji_sprites.py`); verificar espaço em banco/VRAM. Montar o gerador de morph de forma reutilizável para o item 10.
 
-9. - [ ] **Animação de erro: pastel indo para a lixeira.** *(depende do 8)*
-     - Quando a montagem falhar, mostrar o pastel caindo numa lixeira 🗑️. Mesmo método: emojis, 5 quadros-chave + morphs, reaproveitando o gerador e o player de animação do item 8.
+10. - [ ] **Animação de erro: pastel indo para a lixeira.** *(depende do 9)*
+      - Quando a montagem falhar, mostrar o pastel caindo numa lixeira 🗑️. Mesmo método: emojis, 5 quadros-chave + morphs, reaproveitando o gerador e o player de animação do item 9.
 
-10. - [ ] **Sistema de password (salvar sem SRAM).** *(depois do 4: o password aparece na loja)*
+11. - [ ] **Sistema de password (salvar sem SRAM).** *(depois do 4: o password aparece na loja)*
       - **Uma única ROM.** No boot, detectar se o cartucho tem SRAM: gravar e reler dois padrões diferentes (ex.: `$55`/`$AA`) num endereço de SRAM, sem confiar em open bus, e restaurar o byte original. Guardar o resultado numa variável (ex.: `tem_sram`).
         - **Com SRAM:** mantém carregar/salvar como hoje **e** as opções de password (carregar password e depois salvar na SRAM, ou jogo novo na SRAM e depois ver o password dele).
         - **Sem SRAM:** só password. Esconder as opções de slot/salvar e não tentar ler/gravar SRAM.
@@ -79,7 +86,7 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
       - Opções de jogo (`OPT_SRAM`) e troféus: decidir se entram no password ou ficam só na SRAM.
       - Código em outro banco (banco 0 cheio). Teste Lua: gerar password, carregar e comparar o bloco do save; testar também o boot sem SRAM.
 
-11. - [ ] **Vozes com taxa maior (mais qualidade).** *(por último: as melhorias acima adicionam CPU por quadro e mudam o orçamento do barramento)*
+12. - [ ] **Vozes com taxa maior (mais qualidade).** *(por último: as melhorias acima adicionam CPU por quadro e mudam o orçamento do barramento)*
       - Objetivo: subir a taxa das vozes gravadas. A música tema (`VOZ_TEMA`, 10 kHz) já está boa; **não mexer nela**.
       - **Falas em stream** (10 kHz, voz 7 / anel B): o limite é o barramento. Hoje o dia tem ~170–180 bytes/quadro de folga, e música + fala usam ~94 + 94. Para subir a fala, liberar tempo de CPU por quadro otimizando o que compete com o `Bomba` (lógica do dia, montagem de OAM, uploads na NMI, `BtnSprites`/`PillSprites`, etc.). Perfilar antes (skill `snes-otimizacao`, Mesen) para achar os maiores consumidores.
       - Outras ideias: aumentar `LOTE_MAX`, acelerar o laço do `Bomba`, dar prioridade maior à fala enquanto toca, ajustar colchões (0,5 s música / 0,15 s fala).
