@@ -77,13 +77,27 @@ const scenes = {
   shop4_2: [A.shopScene(4, 2), A.shopPal(4), (tx, ty) => ty >= 13 && ty <= 15],
   title: [A.titleScene(), A.PAL_TITLE, null],
   menu: [A.menuScene(), A.PAL_MENU, null],
-  map: [A.mapScene(), A.PAL_MAP, null],
 };
 for (const [name, [img, pal, prio]] of Object.entries(scenes)) {
   const bg = A.sceneToBG(img, 2, prio);
   if ((name === 'menu' || name === 'logo') && bg.count > MENU_CHK_TILE) throw new Error(name + ': tiles demais, invadem o xadrez do BG2');
   w(`${name}_tiles.bin`, bg.tiles); w(`${name}_map.bin`, bg.map); w(`${name}_pal.bin`, palBytes(pal));
   console.log(`cenario ${name}: ${bg.count} tiles`);
+}
+
+// mapa da expansao (gerador/mapa.js): 6 paletas (BG 2..7) e remendos das unidades
+// compradas (gen/map_obras.inc, lidos por MapObras). Emojis: gerador/emoji_mapa.py
+try {
+  execFileSync(PY, [path.join('gerador', 'emoji_mapa.py')], { cwd: ROOT, stdio: 'inherit' });
+} catch (e) {
+  if (!fs.existsSync(path.join(GEN, 'emoji_mapa.json'))) throw e;
+  console.warn('Python indisponivel: reutilizando os emojis do mapa ja gerados em gen/.');
+}
+{
+  const MAPA = require('./gerador/mapa').gerarMapa(JSON.parse(fs.readFileSync(path.join(GEN, 'emoji_mapa.json'), 'utf8')));
+  w('map_tiles.bin', MAPA.tiles); w('map_map.bin', MAPA.map); w('map_pal.bin', Buffer.concat(MAPA.palHex.map(palBytes)));
+  w('map_obras.inc', MAPA.obras);
+  console.log(`mapa: ${MAPA.count} tiles`);
 }
 
 // balao do tutorial (BG2 no expediente): tiles 960+, paleta 3, prioridade alta

@@ -329,39 +329,6 @@ function pilula() {
   return { esq: I.sub(0, 0, 16, 16), meio: I.sub(16, 0, 16, 16), dir: I.sub(32, 0, 16, 16) };
 }
 
-// =================================================================== CENARIO: MAPA
-const PAL_MAP = [null, '#1C0A04', '#3870C8', '#5898E0', '#58A848', '#3C8038', '#88C858', '#C8C0A8',
-  '#8C8478', '#F8F8F0', '#DA4804', '#E8D088', '#3A1A0C', '#A86838', '#FAA61E', '#606878'];
-function mapScene() {
-  const K = 1, w1 = 2, w2 = 3, g1 = 4, g2 = 5, g3 = 6, rd = 7, rd2 = 8, W = 9, R = 10, sand = 11, N = 12, br = 13, Y = 14, gr = 15;
-  const I = new Img(256, 224);
-  // fundo: grama com textura
-  for (let y = 0; y < 224; y++) for (let x = 0; x < 256; x++) I.set(x, y, ((x * 7 + y * 13) % 23 === 0) ? g2 : g1);
-  // faixa HUD
-  I.rect(0, 0, 256, 22, N); I.hline(0, 22, 256, K);
-  I.rect(0, 196, 256, 28, N); I.hline(0, 195, 256, K);
-  // rio
-  for (let y = 23; y < 201; y++) { const x = 150 + Math.round(Math.sin(y / 18) * 10); I.rect(x, y, 14, 1, w1); I.set(x + 3, y, w2); I.set(x + 9, y, w2); }
-  // mar/lago no canto
-  I.ell(200, 150, 290, 230, w1, (x, y) => y < 201); I.ell(206, 156, 290, 230, w2, (x, y) => y < 201 && ((x + y) % 5 === 0));
-  // estradas principais
-  const road = (x, y, w, h) => { I.rect(x, y, w, h, rd); };
-  road(20, 108, 216, 8); road(92, 30, 8, 170); road(196, 40, 8, 66);
-  for (let x = 20; x < 236; x += 8) I.hline(x, 111, 4, W);
-  for (let y = 30; y < 200; y += 8) I.vline(95, y, 4, W);
-  // pontes
-  I.rect(146, 106, 22, 12, br); I.hline(146, 106, 22, K); I.hline(146, 117, 22, K);
-  // quarteiroes da cidade (centro)
-  const block = (x, y, w, h, c) => { I.rect(x, y, w, h, c); I.frame(x, y, w, h, rd2); };
-  block(104, 60, 36, 40, gr); block(104, 122, 36, 36, sand); block(40, 60, 44, 40, sand); block(40, 122, 44, 40, g3); block(170, 60, 22, 40, gr);
-  // telhados dos quarteiroes
-  for (let x = 108; x < 136; x += 8) for (let y = 64; y < 96; y += 8) I.rect(x, y, 5, 4, R);
-  for (let x = 44; x < 80; x += 8) for (let y = 126; y < 158; y += 10) I.rect(x, y, 6, 5, br);
-  // cidades vizinhas (cantos)
-  for (const [x, y] of [[8, 30], [208, 28], [8, 170], [118, 172], [228, 120]]) { I.rect(x, y, 22, 18, rd2); for (let k = 0; k < 3; k++) I.rect(x + 2 + k * 7, y + 3, 5, 5, Y); }
-  return I;
-}
-
 // =================================================================== SPRITES
 // paletas de sprite (OBJ 0..7)
 const SPAL = [
@@ -847,6 +814,6 @@ function buildSprites(emojis = {}) {
 }
 
 module.exports = {
-  shopScene, shopPal, titleScene, menuScene, menuChecker, tutBalloon, PAL_TUT, TUT_BOX, mapScene, buildSprites, sceneToBG, palBytes,
-  PAL_SHOP, PAL_TITLE, PAL_MENU, PAL_MAP, SPAL,
+  shopScene, shopPal, titleScene, menuScene, menuChecker, tutBalloon, PAL_TUT, TUT_BOX, buildSprites, sceneToBG, palBytes,
+  PAL_SHOP, PAL_TITLE, PAL_MENU, SPAL,
 };

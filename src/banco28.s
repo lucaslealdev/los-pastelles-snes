@@ -697,3 +697,90 @@ IconResGfx: .incbin "gen/icon_res_tiles.bin"
 IconResGfx_end:
 IconResPal: .incbin "gen/icon_res_pal.bin"
 .include "gen/icon_res_pal.inc"
+
+; ---------------------------------------------------------------- mapa da expansao
+; Com a tela desligada (VMAIN = $80): escreve no mapa do BG1 o retangulo de cada
+; unidade ja comprada (lojas 1..s_stores e franquias 1..s_fran) por cima do
+; terreno em obra / da placa de venda. Dados: gen/map_obras.inc (gerador/mapa.js)
+MapObras:
+    .a8
+    .i16
+    ldy #0
+@u: tya
+    cmp #4
+    bcs @fr
+    cmp s_stores
+    bcs @nx
+    bra @ap
+@fr:
+    sec
+    sbc #4
+    cmp s_fran
+    bcs @nx
+@ap:
+    phy
+    A16
+    tya
+    asl a
+    tax
+    lda f:MapObraPtr,x
+    tax
+    lda f:MapObraDados,x    ; endereco do canto na VRAM
+    sta tmp
+    lda f:MapObraDados+2,x  ; largura, altura
+    sta tmp2
+    inx
+    inx
+    inx
+    inx
+    A8
+@lin:
+    ldy tmp
+    sty VMADDL
+    lda tmp2
+    sta tmp3
+@col:
+    lda f:MapObraDados,x
+    sta $2118
+    lda f:MapObraDados+1,x
+    sta $2119
+    inx
+    inx
+    dec tmp3
+    bne @col
+    A16
+    lda tmp
+    clc
+    adc #32
+    sta tmp
+    A8
+    dec tmp2+1
+    bne @lin
+    ply
+@nx:
+    iny
+    cpy #MAP_OBRAS_N
+    bne @u
+    rtl
+
+; agua do mapa correndo: a cada 16 quadros troca as cores dos dois brilhos
+; (cores 9 e 11 da paleta BG 2)
+MapAgua:
+    .a8
+    .i16
+    lda frame
+    and #$0F
+    bne @r
+    A16
+    lda cgram_buf+(41*2)
+    pha
+    lda cgram_buf+(43*2)
+    sta cgram_buf+(41*2)
+    pla
+    sta cgram_buf+(43*2)
+    A8
+    lda #1
+    sta pal_dirty
+@r: rtl
+
+.include "gen/map_obras.inc"

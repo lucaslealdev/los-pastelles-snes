@@ -2377,15 +2377,7 @@ MapInit:
     .i16
     jsr FadeOut
     jsr ScreenOff
-    lda #$80
-    sta VMAIN
-    jsr UiOff
-    VRAM_LOAD MapTiles, VRAM_BG1TILES, (MapTiles_end - MapTiles)
-    VRAM_LOAD MapMap, VRAM_BG1MAP, 2048
-    jsr LoadBasePalettes
-    PAL_LOAD MapPal, 32, 32
-    jsr ClearBg3
-    jsr OamClear
+    jsr MapCarrega
     PRINT TXT_MP_TIT, 8, 1, 1
     PRINT TXT_MP_LOJAS, 2, 25, 0
     lda s_stores
@@ -2401,88 +2393,31 @@ MapInit:
     PRINT TXT_HUD_BAR, 24, 25, 0
     PRINTNUM8 tmp4, 25, 25, 0, 1
     PRINT TXT_MP_VOLTAR, 2, 26, 0
-    jsr MapUpdate
     jsr ScreenOn
     jsr FadeIn
     rts
 
-StoreXY: .byte 54,128, 114,66, 54,66, 114,128, 173,66
-FranXY:  .byte 11,31, 211,29, 11,171, 121,173, 231,121
+; mapa da expansao no BG1 (tela desligada): base com os terrenos em obra, as
+; lojas e franquias compradas por cima (MapObras) e paletas BG 2..7.
+; Usado tambem pela escolha da loja do dia
+MapCarrega:
+    .a8
+    .i16
+    lda #$80
+    sta VMAIN
+    jsr UiOff
+    VRAM_LOAD MapTiles, VRAM_BG1TILES, (MapTiles_end - MapTiles)
+    VRAM_LOAD MapMap, VRAM_BG1MAP, 2048
+    jsl MapObras
+    jsr LoadBasePalettes
+    PAL_LOAD MapPal, 32, 192
+    jsr ClearBg3
+    jmp OamClear
 
 MapUpdate:
     .a8
     .i16
-    jsr OamClear
-    lda #1
-    sta spr_size
-    ; lojas (a primeira sempre existe)
-    ldy #0
-@st:
-    tya
-    beq :+
-    dec a
-    cmp s_stores
-    bcs @stdone
-:   phy
-    A16
-    tya
-    asl a
-    tax
-    A8
-    lda StoreXY,x
-    sta spr_x
-    stz spr_x+1
-    lda StoreXY+1,x
-    sta spr_y
-    ; pulinho
-    lda frame
-    lsr a
-    lsr a
-    lsr a
-    and #$01
-    clc
-    adc spr_y
-    sta spr_y
-    A16
-    lda #SPR_LOJA
-    sta spr_tile
-    A8
-    lda #$30
-    sta spr_attr
-    jsr AddSprite
-    ply
-    iny
-    cpy #5
-    bne @st
-@stdone:
-    ldy #0
-@fr:
-    tya
-    cmp s_fran
-    bcs @frdone
-    phy
-    A16
-    tya
-    asl a
-    tax
-    A8
-    lda FranXY,x
-    sta spr_x
-    stz spr_x+1
-    lda FranXY+1,x
-    sta spr_y
-    A16
-    lda #SPR_FRANQUIA
-    sta spr_tile
-    A8
-    lda #$30
-    sta spr_attr
-    jsr AddSprite
-    ply
-    iny
-    cpy #5
-    bne @fr
-@frdone:
+    jsl MapAgua
     lda pad_new+1
     and #(KH_B|KH_START)
     bne @back

@@ -48,7 +48,7 @@ LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 teste/mesen/Mesen --testrunn
 ```
 
 - `teste/bot.lua` is a robot that plays the game by reading RAM. It resolves variable addresses by name from `gen/labels.txt` (ld65 `-Ln` output), so renaming a variable in `vars.inc` can break the bot. Its behavior is configured with `botcfg*.lua` (choose one by setting the `BOTCFG` global).
-- The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mao.lua` (screenshots of the held-item hand next to the cursor), `loja.lua` (one screenshot per shop tab), `pausa.lua` (pause menu screenshots; exits 1 if B doesn't resume), `loja_cenario.lua` (the day scene in all 5 neighborhoods × 3 renovations), `resultado.lua`/`resultado_cheio.lua` (screenshots of both end-of-day pages; the second forces RAM values so every line shows), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
+- The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mao.lua` (screenshots of the held-item hand next to the cursor), `mapa.lua` (expansion map with 0, some and all units, plus the store choice screen), `loja.lua` (one screenshot per shop tab), `pausa.lua` (pause menu screenshots; exits 1 if B doesn't resume), `loja_cenario.lua` (the day scene in all 5 neighborhoods × 3 renovations), `resultado.lua`/`resultado_cheio.lua` (screenshots of both end-of-day pages; the second forces RAM values so every line shows), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
 - Each Lua script finds `teste/` from its own path via `debug.getinfo`. If Mesen doesn't expose `debug`, it falls back to the relative path `teste/`, so launch Mesen from the repo root. Other paths are built from that directory (`dir .. "../gen/labels.txt"`).
 - Outputs (`teste/*.png`, `teste/*.txt`) are gitignored.
 - Running Mesen 2 (Linux x64 build 2.1.1) here:
@@ -202,6 +202,11 @@ The generator modules:
 - **Colors:** they're quantized to the sprite's fixed palette (0 or 1), because during the day palettes 3–7 belong to the customers.
 - **Fallback:** sprites without a good emoji (calabresa, soda can, order bubble, smoke, mascot, pastéis, store) keep the hand-drawn art from `arte.js`.
 - **Build:** `build.js` writes `gen/spal.json` and passes the result (`gen/emoji_spr.json`) to `buildSprites(emojis)`.
+
+### Expansion map (ST_MAP and ST_CHOOSE)
+`gerador/mapa.js` draws the map in RGB (terrain by hand; buildings, construction sites and trees from Twemoji via `gerador/emoji_mapa.py` → `gen/emoji_mapa.json`) following the Gemini concept art in the repo root, then reduces it to 6 BG palettes (2..7): palette 2 is fixed (terrain; colors 9 and 11 are the water highlights that `MapAgua` swaps every 16 frames) and 5 come from k-means over the remaining tiles, always including the grass and outline colors so tiles don't show seams. `node gerador/mapa.js` writes previews to `gen/preview/mapa_base.png` / `mapa_cheio.png`.
+- The base map has construction sites for stores 1–4 and "for sale" signs for the 5 franchises. Each unit is a tile rectangle (`LOJAS`/`FRANQ` in `mapa.js`); the build fails if buying a unit would change pixels outside its rectangle. `gen/map_obras.inc` holds those patches and `StoreXY` (cursor point above each store, read with `f:`); `MapObras` (bank 28) writes the bought ones over the BG1 map while the screen is off.
+- `MapCarrega` (`telas.s`) loads everything for both screens; the choice screen only draws the bobbing cursor (`ChooseSprites`).
 
 ### Menu background (BG2)
 Menu screens (`LoadMenuScene`) show a 2-layer background:

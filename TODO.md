@@ -76,7 +76,8 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - São 5 bairros × 3 reformas (`shopScene`); atenção a paleta e tamanho de banco.
      - Antes da HUD (item 9) porque a HUD nova deve combinar com o cenário novo.
 
-8. - [ ] **Mapa da expansão redesenhado.**
+8. - [x] **Mapa da expansão redesenhado.**
+     - Feito: `gerador/mapa.js` desenha o mapa em RGB seguindo a arte do Gemini (`Gemini_Generated_Image_mzvxjfmzvxjfmzvx.jpeg`: grama, estradas tracejadas com faixa de pedestres, rio com ponte, lago, plantação, faixas marrons) com predios, obras e árvores do Twemoji (`gerador/emoji_mapa.py`), e reduz para 6 paletas de BG. Terrenos em obra viram as lojas de cada bairro (a torre do distrito empresarial é desenhada à mão) e placas de venda viram franquias: remendos de tiles aplicados por `MapObras` (banco 28). A água corre (troca de cores, `MapAgua`). Fotos: `teste/mapa.lua`.
      - Refazer a arte do mapa (`mapScene` em `gerador/arte.js`, tela `ST_MAP`) com mais qualidade: visual moderno de 16 bits, sem cara de desenho de Paint feito por criança.
      - Usar emojis (Twemoji, como o resto do projeto) para os elementos do mapa (lojas, franquias, prédios, árvores, rios, estradas etc.).
      - Antes de desenhar, gerar com o Gemini uma arte conceitual em pixel art 16 bits como referência de composição, cores e estilo; a arte final continua gerada por código em `gerador/`.
