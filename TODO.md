@@ -59,15 +59,8 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Redesenhar a pausa com o mesmo balão creme do tutorial (BG2 + janela + escurecimento via HDMA, como `TutBox`/`TutNmi`), um emoji por item e rodapé com pílula (`Footer`).
      - Mais trabalho que a loja: mexe com HDMA/janelas por cima do jogo e com o limite de sprites (esconder sprites sob o balão, como `TutSprites`).
 
-6. - [ ] **Ajuda dentro do menu de pausa.** *(depende do 4 e do 5)*
-     - Nova opção **AJUDA** no menu de pausa (`PauseDraw`/`PauseMenu` em `src/game.s`), entre CONTINUAR e SAIR, com ícone emoji como os outros itens (ex.: ❓ ou 📖).
-     - Abas trocadas com {L}/{R}, no padrão da loja com abas (item 4: barra com `{L}`/`{R}` e pílula atrás da aba escolhida); {B} volta para a pausa. Abas:
-       1. **CONTROLES:** ilustração de um controle de **Super Famicom** (botões coloridos vermelho/amarelo/azul/verde, L/R, START/SELECT, cruz) com a função de cada botão no jogo ligada a ele (cruz: cursor; {A}: fritar/tirar/entregar; {B}: jogar fora; {X}: refrigerante; {Y}: comanda/entrega; START: pausa). Conferir os controles reais em `DayInput` e no `LEIAME.md`.
-       2. **COMO JOGAR:** o ciclo de um pedido (balão do cliente → sabor → minijogo → fritadeira → ponto verde → entregar), cru/queimado, paciência, combo, entregas.
-       3. **NÍVEIS:** o que cada nível libera (sabores, cestos, itens da loja, entregas, desafios). Tirar os números do código (`PLock`/`ITEM_UNICO` em `ItemPrice`, cartas `UN_*`/`CAP_*`, sabores por nível) para não divergir; de preferência gerar a tabela em `build.js` a partir de uma fonte única.
-       4. **EVOLUÇÃO:** como a pastelaria cresce: dinheiro, reputação, estoque, melhorias da loja, reforma, novas lojas e franquias, mapa e a meta de 10 unidades.
-     - Texto em várias páginas por aba se não couber (respeitar larguras; adicionar checagem no `build.js` como a do `cabe`).
-     - **Cuidados:** roda por cima do expediente (balão BG2 + HDMA do tutorial), então a arte do controle disputa VRAM com o cenário e os sprites do dia, e o limite de 32 sprites / 34 tiles por linha vale para os botões desenhados. Avaliar desenhar o controle em BG2 (tiles próprios carregados ao abrir a ajuda e restaurados ao fechar) em vez de sprites. Banco 0 cheio: código e textos longos no banco 28 (as cartas já ficam no BANK11). Teste Lua com foto de cada aba.
+6. - [x] **Ajuda dentro do menu de pausa.** *(depende do 4 e do 5)*
+     - Feito: AJUDA (❓) entre CONTINUAR e SAIR; balão grande (BG2, `dim_on = 3`) com 4 abas por {L}/{R} (🎮 CONTROLES com o controle do Super Famicom desenhado no BG2, 📘 COMO JOGAR, ⭐ NÍVEIS gerada de `gerador/niveis.js`, 📈 EVOLUÇÃO) e páginas por {CIMA}/{BAIXO}. Níveis com fonte única (`NV_*`). Textos em `gerador/ajuda.js` (largura checada no build). Teste: `teste/ajuda.lua`.
 
 7. - [x] **Cenário da loja com emojis.**
      - Feito: `gerador/emoji_cenario.py` (como `emoji_sprites.py`) reduz e quantiza Twemoji na paleta de cada bairro; `shopScene` cola com `colaEmoji`. Janela 🪟 e vaso 🪴 (inicial), janela grande 🪟 e sacolas 🛍️ (centro comercial), quadro 🖼️ (residencial), livros 📚 junto da lousa (universitária), cidade 🏙️ na janela (empresarial), pastéis 🥟 na vitrine da reforma 1 e girassóis 🌻 nos vasos da reforma 2. A paleta da loja trocou a cor 11 (quase não usada) por verde e a 14 (creme quase igual à 3) por azul. Fotos: `teste/loja_cenario.lua`.

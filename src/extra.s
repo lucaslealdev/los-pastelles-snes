@@ -570,6 +570,7 @@ LoadShopScene:
     VRAM_LOAD TutTiles, TUT_VRAM, (TutTiles_end - TutTiles)
     VRAM_LOAD TutMap, VRAM_BG2MAP, 2048
     PAL_LOAD TutPal, 48, 32
+    jsl AjudaCarrega        ; balao grande e controle da ajuda (pausa)
     rts
 
 .macro UNIT_SCENE n, r

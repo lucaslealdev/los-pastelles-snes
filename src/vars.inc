@@ -118,6 +118,10 @@ tut_box:    .res 1
 tut_shown:  .res 1
 fry_lim:    .res 2      ; teto do progresso da fritura (no tutorial para no ponto)
 pause_sel:  .res 1
+aj_on:      .res 1      ; ajuda da pausa aberta
+aj_aba:     .res 1      ; ajuda: aba (0..AJ_ABAS-1)
+aj_pag:     .res 1      ; ajuda: pagina dentro da aba
+aj_sc:      .res 1      ; ajuda: BG2SC (mapa com ou sem o desenho do controle)
 splash_t:   .res 2
 masc_t:     .res 1
 opt_diff:   .res 1

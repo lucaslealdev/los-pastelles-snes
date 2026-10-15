@@ -7,7 +7,7 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 
 ## Como jogar
 1. Abra `LosPastelles.sfc` num emulador (há um Mesen em `tools/mesen/Mesen.exe`).
-2. **Cruz**: move o cursor · **A**: fritar / tirar do óleo / entregar · **B**: jogar fora o pastel da mão · **X**: pegar refrigerante (nível 7+) · **START**: pausa (na pausa, **B** volta ao jogo).
+2. **Cruz**: move o cursor · **A**: fritar / tirar do óleo / entregar · **B**: jogar fora o pastel da mão · **X**: pegar refrigerante (nível 7+) · **START**: pausa (na pausa, **B** volta ao jogo; **AJUDA** explica controles, como jogar, o que cada nível libera e como a pastelaria cresce, em abas trocadas com **L**/**R**).
 3. Na mesa, escolha o sabor e aperte A, depois repita os botões que aparecem no topo (cruz direcional e A vermelho, B amarelo, X azul, Y verde; ✓ = acertado; barra embaixo = tempo) para **fechar o pastel** (errou ou demorou, o pastel abre).
 4. Tire com A quando a barra ficar **verde** (ponto perfeito). Cru ou queimado o cliente reclama.
 5. O cursor vai sozinho até quem pediu aquele sabor: aperte A. Balão com latinha = **combo**: pegue o refri (X) antes de entregar (+R$ 7).

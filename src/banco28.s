@@ -784,3 +784,368 @@ MapAgua:
 @r: rtl
 
 .include "gen/map_obras.inc"
+
+; ---------------------------------------------------------------- ajuda da pausa
+; Opcao AJUDA da pausa: balao grande (BG2, mapas fixos na VRAM carregados com o
+; cenario) com abas (L/R) e paginas (cima/baixo ou A). A aba CONTROLES mostra o
+; controle do Super Famicom desenhado no BG2 (paleta 4); a NMI troca o BG2SC (aj_sc).
+; Textos e tabelas em gen/ajuda.inc (banco 11, gerador/ajuda.js).
+AJ_LINABA = 5               ; barra de abas
+AJ_LINTIT = 7               ; nome da aba e numero da pagina
+AJ_LIN0   = 9               ; primeira linha do texto (13 linhas)
+AJ_LINROD = 23              ; rodape (pilula na borda de baixo)
+AJ_ICO_Y  = AJ_LINABA*8 - 4
+
+; com o cenario do expediente (tela desligada): tiles, os dois mapas e a paleta 4
+AjudaCarrega:
+    .a8
+    .i16
+    ldx #AJ_VRAM
+    stx VMADDL
+    ldx #.loword(AjTiles)
+    stx dma_src
+    lda #^AjTiles
+    sta dma_src+2
+    ldx #(AjTiles_end - AjTiles)
+    stx dma_len
+    FAR0 DmaVram
+    ldx #AJ_MAPA_VRAM
+    stx VMADDL
+    ldx #.loword(AjMapA)
+    stx dma_src
+    lda #^AjMapA
+    sta dma_src+2
+    ldx #2048
+    stx dma_len
+    FAR0 DmaVram
+    ldx #AJ_MAPB_VRAM
+    stx VMADDL
+    ldx #.loword(AjMapB)
+    stx dma_src
+    lda #^AjMapB
+    sta dma_src+2
+    ldx #2048
+    stx dma_len
+    FAR0 DmaVram
+    ldx #.loword(AjPal)
+    stx dma_src
+    lda #^AjPal
+    sta dma_src+2
+    ldx #(64*2)
+    ldy #32
+    FAR0 CopyPal
+    rtl
+
+; NMI com dim_on = 3 (chamada pelo TutNmi): janela e escurecimento do balao grande
+AjudaNmi:
+    .a8
+    .i16
+    ldx #.loword(AjWinTab)
+    stx $4362
+    lda #^AjWinTab
+    sta $4364
+    ldx #.loword(AjMathTab)
+    stx $4372
+    lda #^AjMathTab
+    sta $4374
+    lda aj_sc
+    sta BG2SC
+    rtl
+; HDMA: contagem ate 127 por bloco (bit 7 seria o modo repetido)
+AjWinTab:
+    .byte AJ_Y0, 255, 0
+    .byte 127, AJ_X0, AJ_X1
+    .byte AJ_H-127, AJ_X0, AJ_X1
+    .byte 1, 255, 0
+    .byte 0
+AjMathTab:
+    .byte AJ_Y0, $B5
+    .byte 127, $B1
+    .byte AJ_H-127, $B1
+    .byte 1, $B5
+    .byte 0
+
+; AJUDA escolhida na pausa
+AjudaAbre:
+    .a8
+    .i16
+    lda #1
+    sta aj_on
+    lda #3
+    sta dim_on
+    stz aj_aba
+    stz aj_pag
+    lda #SFX_OK
+    FAR0 PlaySfx
+    jsr AjudaDraw
+    rtl
+
+; volta para a pausa
+AjudaFecha:
+    .a8
+    .i16
+    stz aj_on
+    lda #2
+    sta dim_on
+    jsr AjLimpa
+    lda #SFX_CURSOR
+    FAR0 PlaySfx
+    FAR0 PauseDraw
+    rts
+
+; apaga as linhas da ajuda (4..23)
+AjLimpa:
+    .a8
+    .i16
+    lda #4
+@l: pha
+    FAR0 ClearRow
+    pla
+    inc a
+    cmp #(AJ_LINROD+1)
+    bne @l
+    rts
+
+; A = indice da pagina atual (AjPagIni[aba] + pagina)
+AjPagina:
+    .a8
+    .i16
+    A16
+    lda aj_aba
+    and #$00FF
+    tax
+    A8
+    lda f:AjPagIni,x
+    clc
+    adc aj_pag
+    rts
+
+; A = numero de paginas da aba atual
+AjNPag:
+    .a8
+    .i16
+    A16
+    lda aj_aba
+    and #$00FF
+    tax
+    A8
+    lda f:AjPagIni+1,x
+    sec
+    sbc f:AjPagIni,x
+    rts
+
+AjudaDraw:
+    .a8
+    .i16
+    jsr AjLimpa
+    PRINT0 TXT_SH_L, 2, AJ_LINABA, 4
+    PRINT0 TXT_SH_R, 29, AJ_LINABA, 4
+    ; nome da aba
+    A16
+    lda aj_aba
+    and #$00FF
+    asl a
+    tax
+    lda f:AjNome,x
+    tax
+    A8
+    ldy #(AJ_LINTIT*32+3)
+    sty txt_pos
+    lda #((5<<2)|$20)
+    sta txt_attr
+    lda #^AjNome
+    FAR0 PrintStrB
+    ; "1/3" e o texto da pagina
+    jsr AjPagina
+    A16
+    and #$00FF
+    pha
+    asl a
+    tax
+    lda f:AjPagNum,x
+    tax
+    A8
+    ldy #(AJ_LINTIT*32+26)
+    sty txt_pos
+    lda #((4<<2)|$20)
+    sta txt_attr
+    lda #^AjPagNum
+    FAR0 PrintStrB
+    A16
+    lda 1,s
+    asl a
+    tax
+    lda f:AjPagTxt,x
+    tax
+    A8
+    ldy #(AJ_LIN0*32+3)
+    sty txt_pos
+    lda #^AjPagTxt
+    FAR0 PrintStrB
+    ; BG2: mapa com o desenho do controle ou so o balao
+    A16
+    pla
+    tax
+    A8
+    lda f:AjPagDes,x
+    beq :+
+    lda #AJ_SC_A
+    bra :++
+:   lda #AJ_SC_B
+:   sta aj_sc
+    ; rodape: com mais de uma pagina, diz como trocar
+    jsr AjNPag
+    cmp #2
+    ldx #TXT_AJ_ROD0
+    bcc :+
+    ldx #TXT_AJ_ROD1
+:   lda #AJ_LINROD
+    FAR0 Footer
+    rts
+
+; um quadro com a ajuda aberta (chamada pelo PauseMenu)
+AjudaUpdate:
+    .a8
+    .i16
+    lda pad_new+1
+    and #(KH_B|KH_START)
+    beq @nb
+    jsr AjudaFecha
+    rtl
+@nb:
+    ; L ou esquerda: aba anterior; R ou direita: proxima (dao a volta)
+    lda pad_new
+    and #KL_L
+    bne @al
+    lda pad_new+1
+    and #KH_LEFT
+    beq @nl
+@al:
+    lda aj_aba
+    dec a
+    bpl @aba
+    lda #(AJ_ABAS-1)
+    bra @aba
+@nl:
+    lda pad_new
+    and #KL_R
+    bne @ar
+    lda pad_new+1
+    and #KH_RIGHT
+    beq @nr
+@ar:
+    lda aj_aba
+    inc a
+    cmp #AJ_ABAS
+    bcc @aba
+    lda #0
+@aba:
+    sta aj_aba
+    stz aj_pag
+    bra @muda
+@nr:
+    ; cima: pagina anterior; baixo ou A: proxima (dao a volta)
+    jsr AjNPag
+    sta tmp
+    cmp #2
+    bcc @r
+    lda pad_new+1
+    and #KH_UP
+    beq @nu
+    lda aj_pag
+    dec a
+    bpl @pag
+    lda tmp
+    dec a
+    bra @pag
+@nu:
+    lda pad_new+1
+    and #KH_DOWN
+    bne @prox
+    lda pad_new
+    and #KL_A
+    beq @r
+@prox:
+    lda aj_pag
+    inc a
+    cmp tmp
+    bcc @pag
+    lda #0
+@pag:
+    sta aj_pag
+@muda:
+    lda #SFX_CURSOR
+    FAR0 PlaySfx
+    jsr AjudaDraw
+@r: rtl
+
+; icones das abas, com a pilula atras da escolhida (chamada pelo PauseSprites)
+AjudaSprites:
+    .a8
+    .i16
+    lda #0
+@l: pha
+    A16
+    and #$00FF
+    asl a
+    tax
+    lda f:AjIcoX,x
+    sta spr_x
+    lda f:AjIcoTile,x
+    sta spr_tile
+    A8
+    lda #AJ_ICO_Y
+    sta spr_y
+    lda 1,s
+    cmp aj_aba
+    bne :+
+    A16
+    lda frame
+    lsr a
+    and #$001F
+    tax
+    A8
+    lda f:UiBob,x
+    clc
+    adc spr_y
+    sta spr_y
+:   lda #$30
+    sta spr_attr
+    lda #1
+    sta spr_size
+    FAR0 AddSprite
+    pla
+    inc a
+    cmp #AJ_ABAS
+    bne @l
+    ; pilula (2 pecas de 16) centrada no icone escolhido; depois dos icones = atras
+    A16
+    lda aj_aba
+    and #$00FF
+    asl a
+    tax
+    lda f:AjIcoX,x
+    sec
+    sbc #8
+    sta spr_x
+    lda #SPR_PILULA_E
+    sta spr_tile
+    A8
+    lda #AJ_ICO_Y
+    sta spr_y
+    lda #$32
+    sta spr_attr
+    FAR0 AddSprite
+    A16
+    lda spr_x
+    clc
+    adc #16
+    sta spr_x
+    lda #SPR_PILULA_D
+    sta spr_tile
+    A8
+    FAR0 AddSprite
+    stz spr_size
+    rtl
+AjIcoX:    .word 54, 98, 142, 186
+AjIcoTile: .word SPR_AJ_CONTROLE, SPR_AJ_LIVRO, SPR_ESTRELA, SPR_AJ_GRAFICO

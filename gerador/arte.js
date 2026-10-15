@@ -319,6 +319,71 @@ function tutBalloon() {
   return I;
 }
 
+// balao da ajuda (BG2, aberto pela pausa): mesmo visual do balao do tutorial, quase a
+// tela toda; o interior e liso em cima (o controle desenhado na paleta 4 assenta nele)
+// e ganha o degrade so embaixo
+const AJ_BOX = { x: 8, y: 24, w: 240, h: 168 };
+const AJ_LISO = 6;                 // cor do interior liso (PAL_TUT 6 = PAL_CTRL 15)
+function ajudaBalloon() {
+  const I = new Img(256, 224);
+  const { x, y, w, h } = AJ_BOX;
+  roundRect(I, x, y, w, h, 6, 1);
+  roundRect(I, x + 1, y + 1, w - 2, h - 2, 5, 3);
+  for (let i = x + 4; i < x + w - 4; i++) I.set(i, y + 1, 2);
+  roundRect(I, x + 3, y + 3, w - 6, h - 6, 3, 4);
+  const y0 = 128;                  // abaixo do desenho do controle
+  roundRect(I, x + 4, y + 4, w - 8, h - 8, 2, (px, py) => (py < y0 ? AJ_LISO : degrade([6, 7, 8, 9], (py - y0) / (y + h - 5 - y0), px, py)));
+  return I;
+}
+
+// controle do Super Famicom para a aba CONTROLES da ajuda (BG paleta 4; 15 = fundo liso)
+const PAL_CTRL = [null, '#1C0A04', '#ECECF2', '#C8C8D4', '#9898AC', '#383844', '#686878', '#E03030', '#981818',
+  '#F8D838', '#C08818', '#4878E8', '#2848A0', '#40C040', '#207828', '#FFF8EC'];
+const CTRL_POS = { x: 48, y: 64 };  // canto do desenho na tela (alinhado aos tiles)
+function controleSFC() {
+  const I = new Img(160, 56, 15);
+  const C = new Img(160, 56);
+  const corpo = (img, dy, c) => {
+    img.ell(10, 7 + dy, 58, 53 + dy, c); img.ell(102, 7 + dy, 150, 53 + dy, c);
+    roundRect(img, 34, 10 + dy, 92, 40, 4, c);
+  };
+  // L e R (atras do corpo)
+  roundRect(C, 12, 1, 38, 14, 5, 4); roundRect(C, 110, 1, 38, 14, 5, 4);
+  C.outline(1);
+  // corpo: sombra embaixo (3), luz por cima (2) e contorno
+  const B = new Img(160, 56);
+  corpo(B, 0, 3); corpo(B, -2, 2);
+  for (let i = 0; i < B.p.length; i++) if (B.p[i]) C.p[i] = B.p[i];
+  const so = new Img(160, 56); corpo(so, 0, 1); so.outline(9);
+  for (let i = 0; i < so.p.length; i++) if (so.p[i] === 9) C.p[i] = 1;
+  // letras dos ombros
+  const L3 = { L: ['#..', '#..', '#..', '#..', '###'], R: ['##.', '#.#', '##.', '#.#', '#.#'] };
+  const letra = (img, l, x, y, c) => L3[l].forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '#') img.set(x + i, y + j, c); });
+  letra(C, 'L', 22, 2, 5); letra(C, 'R', 136, 2, 5);
+  // cruz direcional num rebaixo
+  C.ell(19, 17, 49, 46, 3);
+  C.rect(29, 19, 10, 26, 5); C.rect(21, 27, 26, 10, 5);
+  C.hline(30, 20, 8, 6); C.vline(30, 20, 7, 6); C.hline(22, 28, 7, 6); C.vline(22, 28, 8, 6);
+  C.rect(32, 30, 4, 4, 6);
+  // SELECT e START, e as quatro cores do logo
+  roundRect(C, 63, 36, 13, 6, 3, 5); roundRect(C, 84, 36, 13, 6, 3, 5);
+  [[70, 7], [76, 9], [82, 11], [88, 13]].forEach(([x, c]) => C.rect(x - 1, 21, 3, 3, c));
+  // botoes: X em cima, A a direita, B embaixo, Y a esquerda
+  const LT = { A: ['.#.', '#.#', '###', '#.#', '#.#'], B: ['##.', '#.#', '##.', '#.#', '##.'],
+    X: ['#.#', '#.#', '.#.', '#.#', '#.#'], Y: ['#.#', '#.#', '.#.', '.#.', '.#.'] };
+  C.ell(105, 11, 147, 51, 3);
+  for (const [l, cx, cy, c, e] of [['X', 126, 18, 11, 12], ['A', 140, 32, 7, 8], ['B', 126, 46, 9, 10], ['Y', 112, 32, 13, 14]]) {
+    const b = new Img(160, 56);
+    b.ell(cx - 6, cy - 6, cx + 6, cy + 6, e); b.ell(cx - 6, cy - 6, cx + 5, cy + 5, c);
+    b.set(cx - 3, cy - 4, 15); b.set(cx - 4, cy - 3, 15);
+    LT[l].forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '#') b.set(cx - 1 + i, cy - 2 + j, l === 'B' ? 1 : 15); });
+    b.outline(1);
+    for (let i = 0; i < b.p.length; i++) if (b.p[i]) C.p[i] = b.p[i];
+  }
+  I.paste(C, 0, 0);
+  return I;
+}
+
 // pilula dos botoes de acao (rodape das caixas): sprites 16x16 na paleta 1
 // (creme F8F0C8 -> E8D098, brilho F8F8F8, borda C8A868, sombra 805030)
 function pilula() {
@@ -658,7 +723,7 @@ function botao8(tipo) {
     I.rect(2, 0, 4, 8, k); I.rect(0, 2, 8, 4, k);
     I.rect(3, 1, 2, 6, G); I.rect(1, 3, 6, 2, G); I.rect(3, 3, 2, 2, g);
     const arm = { CIMA: [3, 1, 2, 2], BAIXO: [3, 5, 2, 2], ESQ: [1, 3, 2, 2], DIR: [5, 3, 2, 2] }[tipo];
-    I.rect(arm[0], arm[1], arm[2], arm[3], y);
+    if (arm) I.rect(arm[0], arm[1], arm[2], arm[3], y);       // {CRUZ}: nenhum lado aceso
   }
   return I;
 }
@@ -767,6 +832,10 @@ function buildSprites(emojis = {}) {
   put('REFRI_P', refriP(), 0);
   // menu de pausa: continuar e sair (sem emoji: triangulo e casinha simples)
   put('PAUSA_CONT', emo('continuar', () => { const I = new Img(16, 16); I.rect(1, 1, 14, 14, 15); for (let j = 0; j < 8; j++) I.rect(5, 4 + j / 2 | 0, 1 + j, 8 - (j & ~1), 2); I.outline(1); return I; }), 0);
+  // ajuda (pausa): item da pausa e icones das abas (sem emoji: um circulo de cor)
+  const bola = (c) => () => { const I = new Img(16, 16); I.ell(1, 1, 14, 14, c); I.outline(1); return I; };
+  put('PAUSA_AJUDA', emo('ajuda', bola(9)), 0);
+  put('AJ_CONTROLE', emo('controle', bola(3)), 0); put('AJ_LIVRO', emo('livro', bola(15)), 0); put('AJ_GRAFICO', emo('grafico', bola(11)), 0);
   put('PAUSA_SAIR', emo('casa', () => { const I = new Img(16, 16); for (let j = 0; j < 6; j++) I.rect(7 - j, 1 + j, 2 + 2 * j, 1, 9); I.rect(3, 7, 10, 7, 14); I.rect(7, 10, 3, 4, 7); I.outline(1); return I; }), 0);
   { const b = new Img(8, 8); b.ell(1, 1, 6, 6, 13); b.ell(2, 2, 5, 5, 0); b.set(2, 2, 13); put('BOLHA', b, 1); }
   for (const b of ['U', 'D', 'L', 'R', 'A', 'B', 'X', 'Y', 'OK']) put('BTN_' + b, botao(b), 0);
@@ -814,6 +883,7 @@ function buildSprites(emojis = {}) {
 }
 
 module.exports = {
-  shopScene, shopPal, titleScene, menuScene, menuChecker, tutBalloon, PAL_TUT, TUT_BOX, buildSprites, sceneToBG, palBytes,
+  shopScene, shopPal, titleScene, menuScene, menuChecker, tutBalloon, PAL_TUT, TUT_BOX,
+  ajudaBalloon, AJ_BOX, controleSFC, PAL_CTRL, CTRL_POS, buildSprites, sceneToBG, palBytes,
   PAL_SHOP, PAL_TITLE, PAL_MENU, SPAL,
 };

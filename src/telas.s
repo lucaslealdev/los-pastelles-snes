@@ -707,7 +707,7 @@ CardInput:
     rts
 
 ; ================================================================ ANTES DO DIA
-LevelCap: .byte 5, 12, 20, 30, 99
+LevelCap: .byte NV_DESAFIO0, NV_DESAFIO1, NV_DESAFIO2, NV_DESAFIO3, 99
 
 PreDayInit:
     .a8
@@ -1210,12 +1210,12 @@ ResultsUpdate:
     bcs @lvdone
     inc a
     sta r_oldlvl
-    cmp #3
+    cmp #NV_CALABRESA
     bne :+
     lda #CARD_UN_CALAB
     jsr CardAdd
 :   lda r_oldlvl
-    cmp #6
+    cmp #NV_REQUEIJAO
     bne :+
     lda #CARD_UN_REQUEIJAO
     jsr CardAdd
@@ -1224,29 +1224,29 @@ ResultsUpdate:
     lda #CARD_UN_TEL
     jsr CardAdd
 :   lda r_oldlvl
-    cmp #7
+    cmp #NV_REFRI
     bne :+
     lda #CARD_UN_REFRI
     jsr CardAdd
 :   lda r_oldlvl
-    cmp #9
+    cmp #NV_BACON
     bne :+
     lda #CARD_UN_BACON
     jsr CardAdd
 :   lda r_oldlvl
-    cmp #10
+    cmp #NV_PUBLI
     bne :+
     lda #CARD_UN_PUBLI
     jsr CardAdd
 :   lda r_oldlvl
-    cmp #13
+    cmp #NV_LOJA
     bne :+
     lda #CARD_UN_LOJA
     jsr CardAdd
     lda #CARD_UN_PC
     jsr CardAdd
 :   lda r_oldlvl
-    cmp #21
+    cmp #NV_FRANQUIA
     bne :+
     lda #CARD_UN_FRAN
     jsr CardAdd
@@ -1508,7 +1508,7 @@ P3:
 P4:
     .a8
     .i16
-    lda #6
+    lda #NV_ATENDENTE
     jsr PLock
     JCS PRet
     lda s_attend
@@ -1518,7 +1518,7 @@ P4:
 P5:
     .a8
     .i16
-    lda #10
+    lda #NV_PUBLI
     jsr PLock
     JCS PRet
     lda s_ads
@@ -1528,7 +1528,7 @@ P5:
 P6:
     .a8
     .i16
-    lda #13
+    lda #NV_LOJA
     jsr PLock
     JCS PRet
     lda s_stores
@@ -1553,13 +1553,13 @@ P6:
 P7:
     .a8
     .i16
-    lda #21
+    lda #NV_FRANQUIA
     jsr PLock
     JCS PRet
     lda s_boss
     cmp #3
     bcs :+
-    lda #21
+    lda #NV_FRANQUIA
     sta lock_lv
     SETP $FFFE
     rts
@@ -1573,8 +1573,8 @@ P7:
     rts
 :   SETP 4000
     rts
-P9: ; computador de pedidos (nivel 13)
-    lda #13
+P9: ; computador de pedidos
+    lda #NV_PC
     jsr PLock
     bcs P9r
     lda s_pc
@@ -1583,8 +1583,8 @@ P9: ; computador de pedidos (nivel 13)
 :   SETP 600
 P9r:
     rts
-P10: ; motoboy extra (nivel 6)
-    lda #6
+P10: ; motoboy extra
+    lda #NV_MOTOBOY
     jsr PLock
     bcs P10r
     lda s_moto
@@ -1606,13 +1606,13 @@ fim:
     rts
 .endmacro
 P11: ; freezer
-    ITEM_UNICO 4, s_freezer, 250
+    ITEM_UNICO NV_FREEZER, s_freezer, 250
 P12: ; ar-condicionado
-    ITEM_UNICO 7, s_ar, 400
+    ITEM_UNICO NV_AR, s_ar, 400
 P13: ; musica ambiente
-    ITEM_UNICO 5, s_musica, 150
+    ITEM_UNICO NV_MUSICA, s_musica, 150
 P14: ; uniforme da marca
-    ITEM_UNICO 10, s_unif, 300
+    ITEM_UNICO NV_UNIFORME, s_unif, 300
 P15: ; reforma do salao (2 etapas)
     lda s_reforma
     cmp #2
@@ -1620,12 +1620,12 @@ P15: ; reforma do salao (2 etapas)
     jmp PMax
 :   cmp #1
     bcs :+
-    lda #8
+    lda #NV_REFORMA1
     jsr PLock
     bcs P15r
     SETP 900
     rts
-:   lda #14
+:   lda #NV_REFORMA2
     jsr PLock
     bcs P15r
     SETP 2500

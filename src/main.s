@@ -967,6 +967,7 @@ IconPal:    .incbin "gen/icon_pal.bin"
 .include "gen/voz.inc"         ; tabelas das vozes (acesso longo, f:)
 .segment "BANK11"
 .include "gen/cards.inc"
+.include "gen/ajuda.inc"       ; textos da ajuda da pausa (acesso longo, f:)
 
 .segment "BANK2"
 MenuTiles:  .incbin "gen/menu_tiles.bin"
@@ -983,6 +984,11 @@ TutTiles:   .incbin "gen/tut_tiles.bin"
 TutTiles_end:
 TutMap:     .incbin "gen/tut_map.bin"
 TutPal:     .incbin "gen/tut_pal.bin"
+AjTiles:    .incbin "gen/aj_tiles.bin"
+AjTiles_end:
+AjMapA:     .incbin "gen/aj_mapa.bin"
+AjMapB:     .incbin "gen/aj_mapb.bin"
+AjPal:      .incbin "gen/aj_pal.bin"
 
 .segment "BANK3"
 TitleTiles: .incbin "gen/title_tiles.bin"

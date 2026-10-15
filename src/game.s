@@ -63,13 +63,13 @@ SetupDay:
     lda #3
     sta n_flav
     lda s_level
-    cmp #3
+    cmp #NV_CALABRESA
     bcc :+
     inc n_flav
-:   cmp #6
+:   cmp #NV_REQUEIJAO
     bcc :+
     inc n_flav
-:   cmp #9
+:   cmp #NV_BACON
     bcc :+
     inc n_flav
 :   lda s_fryer
@@ -97,6 +97,7 @@ SetupDay:
     stz d_mystery
     stz d_myst_ok
     stz d_paused
+    stz aj_on
     stz msg_timer
     lda #$FF
     sta d_broke
@@ -398,8 +399,10 @@ DrawHud:
 
 ; ---------------------------------------------------------------- pausa
 ; mesmo balao creme do tutorial (dim_on = 2: TutNmi/TutSprites); um emoji por item
-; (PauseSprites, depois do TutSprites) e rodape em pilula
-PA_LIN0 = 11                ; linha do primeiro item (o segundo fica 2 abaixo)
+; (PauseSprites, depois do TutSprites) e rodape em pilula na borda de baixo.
+; AJUDA abre a ajuda (banco 28: AjudaAbre/AjudaUpdate, dim_on = 3)
+PA_LIN0 = 11                ; linha do primeiro item (os outros de 2 em 2)
+PA_N    = 3                 ; CONTINUAR, AJUDA, SAIR
 
 PauseDraw:
     .a8
@@ -407,36 +410,57 @@ PauseDraw:
     jsr TutBoxClear
     PRINT TXT_PAUSA, 4, 9, 5
     ; itens: o escolhido em vermelho
-    ldy #((4<<2)|$20)
-    lda pause_sel
+    lda #0
+@it:
+    pha
+    A16
+    and #$00FF
+    tay
+    asl a
+    tax
+    tya
+    asl a                   ; linha = PA_LIN0 + 2 * item
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    clc
+    adc #(PA_LIN0*32+7)
+    sta txt_pos
+    lda PauseTxt,x
+    tax
+    A8
+    lda #((4<<2)|$20)
+    sta txt_attr
+    lda 1,s
+    cmp pause_sel
     bne :+
-    ldy #((5<<2)|$20)
-:   sty txt_attr
-    ldx #(PA_LIN0*32+7)
-    stx txt_pos
-    ldx #TXT_PA_CONT
-    jsr PrintStr
-    ldy #((4<<2)|$20)
-    lda pause_sel
-    beq :+
-    ldy #((5<<2)|$20)
-:   sty txt_attr
-    ldx #((PA_LIN0+2)*32+7)
-    stx txt_pos
-    ldx #TXT_PA_SAIR
-    jsr PrintStr
-    lda pause_sel
-    beq :+
-    PRINT TXT_PA_AVISO, 4, PA_LIN0+4, 4
+    lda #((5<<2)|$20)
+    sta txt_attr
+:   jsr PrintStr
+    pla
+    inc a
+    cmp #PA_N
+    bne @it
+    lda pause_sel           ; SAIR: o dia nao e salvo
+    cmp #(PA_N-1)
+    bne :+
+    PRINT TXT_PA_AVISO, 7, PA_LIN0+5, 4
 :   ldx #TXT_TIT_AJ
-    lda #(PA_LIN0+6)
+    lda #(PA_LIN0+7)
     jmp Footer
+PauseTxt: .word TXT_PA_CONT, TXT_PA_AJUDA, TXT_PA_SAIR
 
 ; icones dos itens (chamada pelo TutSprites, depois de esconder os sprites do jogo)
 PauseSprites:
     .a8
     .i16
-    lda #0
+    lda aj_on
+    beq :+
+    jsl AjudaSprites
+    rts
+:   lda #0
 @l: pha
     A16
     lda #32
@@ -477,23 +501,41 @@ PauseSprites:
     stz spr_size
     pla
     inc a
-    cmp #2
+    cmp #PA_N
     bne @l
     rts
-PauseIco: .word SPR_PAUSA_CONT, SPR_PAUSA_SAIR
+PauseIco: .word SPR_PAUSA_CONT, SPR_PAUSA_AJUDA, SPR_PAUSA_SAIR
 
 PauseMenu:
     .a8
     .i16
-    lda pad_new+1
-    and #(KH_UP|KH_DOWN|KH_SEL)
+    lda aj_on
     beq :+
+    jsl AjudaUpdate
+    rts
+:   lda pad_new+1
+    and #KH_UP
+    beq @nu
     lda pause_sel
-    eor #1
+    dec a
+    bpl @sel
+    lda #(PA_N-1)
+    bra @sel
+@nu:
+    lda pad_new+1
+    and #(KH_DOWN|KH_SEL)
+    beq @nd
+    lda pause_sel
+    inc a
+    cmp #PA_N
+    bcc @sel
+    lda #0
+@sel:
     sta pause_sel
     SFX SFX_CURSOR
     jsr PauseDraw
-:   lda pad_new+1
+@nd:
+    lda pad_new+1
     and #KH_B
     bne @cont               ; B: volta ao jogo
     lda pad_new+1
@@ -505,7 +547,11 @@ PauseMenu:
     rts
 @ok:
     lda pause_sel
+    beq @cont
+    cmp #1
     bne @sair
+    jsl AjudaAbre
+    rts
 @cont:
     stz d_paused
     stz dim_on
@@ -681,12 +727,12 @@ TutBox:
 TutBoxClear:
     .a8
     .i16
-    lda #9
+    lda #9                  ; linhas 9..18 (o rodape da pausa fica na 18)
 @l: pha
     jsr ClearRow
     pla
     inc a
-    cmp #18
+    cmp #19
     bne @l
     rts
 
@@ -1154,7 +1200,7 @@ ActionA:
     sbc n_flav
     jmp TakeFromBasket
 
-COMBO_LV = 7
+COMBO_LV = NV_REFRI
 
 ; A = sabor: confere estoque/cesto e abre o minijogo de fechar o pastel
 StartFry:
@@ -1251,10 +1297,10 @@ MiniStart:
     .i16
     lda s_level
     ldy #2
-    cmp #6
+    cmp #NV_MG3
     bcc :+
     ldy #3
-    cmp #13
+    cmp #NV_MG4
     bcc :+
     ldy #4
 :   lda mg_mode
@@ -2239,7 +2285,7 @@ DaySpawn:
     lda d_mystery
     bne @normal
     lda s_level
-    cmp #4
+    cmp #NV_MISTERIO
     bcc @normal
     lda #100
     phx
@@ -2272,7 +2318,7 @@ DaySpawn:
     sta c_order,x
     ; turista (nivel 3+, 15%): pede o sabor mais caro
     lda s_level
-    cmp #3
+    cmp #NV_TURISTA
     bcc @noTur
     phx
     lda #100
@@ -2292,7 +2338,7 @@ DaySpawn:
 @noTur:
     ; pedido duplo (nivel 4+): 25% (residencial 40%)
     lda s_level
-    cmp #4
+    cmp #NV_DUPLO
     bcc @noqty
     phx
     lda #100
@@ -2958,7 +3004,7 @@ DrawPopup:
     jmp AddSprite
 
 ; ================================================================ ENTREGAS (telefone e aplicativo)
-TEL_LV = 6
+TEL_LV = NV_TELEFONE
 
 ; maximo de comandas abertas: 2 (so telefone) ou 3 (com computador)
 DvMax:

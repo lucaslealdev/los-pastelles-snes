@@ -6,6 +6,8 @@ const A = require('./gerador/arte');
 const F = require('./gerador/fonte');
 const AU = require('./gerador/audio');
 const { T, CARDS } = require('./gerador/textos');
+const { NV } = require('./gerador/niveis');
+const AJ = require('./gerador/ajuda');
 const V = require('./gerador/versao');
 const { palBytes } = require('./gerador/gfx');
 
@@ -78,10 +80,12 @@ const scenes = {
   title: [A.titleScene(), A.PAL_TITLE, null],
   menu: [A.menuScene(), A.PAL_MENU, null],
 };
+let maxLoja = 0;                   // tiles do maior cenario do expediente (BG1)
 for (const [name, [img, pal, prio]] of Object.entries(scenes)) {
   const bg = A.sceneToBG(img, 2, prio);
   if ((name === 'menu' || name === 'logo') && bg.count > MENU_CHK_TILE) throw new Error(name + ': tiles demais, invadem o xadrez do BG2');
   w(`${name}_tiles.bin`, bg.tiles); w(`${name}_map.bin`, bg.map); w(`${name}_pal.bin`, palBytes(pal));
+  if (/^shop/.test(name)) maxLoja = Math.max(maxLoja, bg.count);
   console.log(`cenario ${name}: ${bg.count} tiles`);
 }
 
@@ -115,6 +119,37 @@ const TUT_TILE = 960;
   if (TUT_TILE + tiles.length > MENU_CHK_TILE) throw new Error('balao do tutorial: tiles demais');
   w('tut_tiles.bin', Buffer.concat(tiles)); w('tut_map.bin', map); w('tut_pal.bin', palBytes(A.PAL_TUT));
   console.log(`balao do tutorial: ${tiles.length} tiles`);
+}
+
+// ajuda da pausa (BG2 no expediente): balao grande + controle do Super Famicom (paleta 4).
+// Dois mapas fixos na VRAM (A com o controle, B so o balao); a NMI troca o BG2SC.
+// Mapas logo antes dos tiles do balao do tutorial, tiles da ajuda logo antes dos mapas.
+const AJ_MAPA = 0x3400, AJ_MAPB = 0x3800;   // enderecos de palavra (multiplos de $400)
+let AJ_TILE;
+{
+  const { tilePixels, enc4 } = require('./gerador/gfx');
+  const bal = A.ajudaBalloon(), ctl = A.controleSFC(), P = A.CTRL_POS;
+  const tiles = [], dict = new Map(), ea = [], eb = [];
+  const ent = (px, pal) => {
+    const k = pal + ':' + px.join(',');
+    if (!dict.has(k)) { dict.set(k, tiles.length); tiles.push(enc4(px)); }
+    return { t: dict.get(k), pal };
+  };
+  for (let ty = 0; ty < 28; ty++) for (let tx = 0; tx < 32; tx++) {
+    const px = tilePixels(bal, tx, ty), i = ty * 32 + tx;
+    eb[i] = px.every((c) => !c) ? null : ent(px, 3);
+    ea[i] = eb[i];
+    const cx = tx - P.x / 8, cy = ty - P.y / 8;
+    if (cx >= 0 && cy >= 0 && cx < ctl.w / 8 && cy < ctl.h / 8) {
+      const cp = tilePixels(ctl, cx, cy);
+      if (!cp.every((c) => c === 15)) ea[i] = ent(cp, 4);
+    }
+  }
+  AJ_TILE = AJ_MAPA / 16 - tiles.length;
+  if (maxLoja > AJ_TILE) throw new Error(`cenario da loja com ${maxLoja} tiles invade os tiles da ajuda (${AJ_TILE}+)`);
+  const mapa = (es) => { const m = Buffer.alloc(2048); es.forEach((e, i) => { if (e) m.writeUInt16LE((AJ_TILE + e.t) | (e.pal << 10) | 0x2000, i * 2); }); return m; };
+  w('aj_tiles.bin', Buffer.concat(tiles)); w('aj_mapa.bin', mapa(ea)); w('aj_mapb.bin', mapa(eb)); w('aj_pal.bin', palBytes(A.PAL_CTRL));
+  console.log(`ajuda: ${tiles.length} tiles (${AJ_TILE}+; maior cenario da loja: ${maxLoja})`);
 }
 
 // ------------------------------------------------------------ sprites
@@ -244,6 +279,14 @@ inc.push(`MENU_CHK_VRAM = ${hex4(MENU_CHK_TILE * 16)}`);
 inc.push(`TUT_VRAM = ${hex4(TUT_TILE * 16)}`);
 inc.push(`SP_VER_COL = ${(32 - [...VERSAO_TXT].length) >> 1}`);
 { const b = A.TUT_BOX; inc.push(`TUT_X0 = ${b.x}`, `TUT_X1 = ${b.x + b.w - 1}`, `TUT_Y0 = ${b.y}`, `TUT_H = ${b.h}`); }
+{ const b = A.AJ_BOX; inc.push(`AJ_X0 = ${b.x}`, `AJ_X1 = ${b.x + b.w - 1}`, `AJ_Y0 = ${b.y}`, `AJ_H = ${b.h}`); }
+inc.push(`AJ_VRAM = ${hex4(AJ_TILE * 16)}`, `AJ_MAPA_VRAM = ${hex4(AJ_MAPA)}`, `AJ_MAPB_VRAM = ${hex4(AJ_MAPB)}`,
+  `AJ_SC_A = ${hex2(AJ_MAPA >> 8)}`, `AJ_SC_B = ${hex2(AJ_MAPB >> 8)}`);
+// niveis (gerador/niveis.js): o codigo usa NV_*; cartas de desbloqueio agrupadas no mesmo nivel
+for (const [k, v] of Object.entries(NV)) inc.push(`NV_${k} = ${v}`);
+inc.push(`AJ_ABAS = ${AJ.abas(T, CARDS).length}`);
+if (NV.ATENDENTE !== NV.REQUEIJAO || NV.TELEFONE !== NV.REQUEIJAO || NV.PC !== NV.LOJA)
+  throw new Error('niveis.js: as cartas UN_ATEND/UN_TEL saem no nivel do requeijao e UN_PC no da nova loja (ResultsUpdate)');
 inc.push(`UI_N_OPEN = ${UI.N_OPEN}`, `UI_TAB_LEN = ${UI.TAB_LEN}`);
 Object.keys(CARDS).forEach((k, i) => inc.push(`CARD_${k} = ${i}`));
 music.songs.forEach((s, i) => inc.push(`SONG_${s.name.toUpperCase()} = ${i}`));
@@ -261,8 +304,8 @@ function cabe(nome, txt, maxCol, maxLin) {
 for (const [k, [, , b]] of Object.entries(CARDS)) cabe('carta ' + k, b, 26, 17);
 for (const [k, v] of Object.entries(T)) if (/^TB_B/.test(k)) cabe(k, v, 25, 6);
 // pausa (balao do tutorial): titulo e aviso na coluna 4, itens na 7 (depois do icone)
-for (const k of ['PAUSA', 'PA_AVISO']) cabe(k, T[k], 25, 1);
-for (const k of ['PA_CONT', 'PA_SAIR']) cabe(k, T[k], 22, 1);
+cabe('PAUSA', T.PAUSA, 25, 1);
+for (const k of ['PA_CONT', 'PA_AJUDA', 'PA_SAIR', 'PA_AVISO']) cabe(k, T[k], 22, 1);
 // missao ao lado do icone no fim do dia (DrawResults: coluna 5 ate 28)
 for (const [k, v] of Object.entries(T)) if (/^MIS_/.test(k)) cabe(k, v, 24, 1);
 
@@ -278,6 +321,28 @@ cardEntries.forEach(([k, [p, t, b]]) => {
 cards.push('CardTable:');
 cardEntries.forEach(([k, [p]]) => cards.push(`  .byte ${hex2(p & 255)}\n  .word .loword(CTXT_${k}_T), .loword(CTXT_${k}_B)`));
 w('cards.inc', cards.join('\n') + '\n');
+// ajuda da pausa (gerador/ajuda.js): textos no banco das cartas
+{
+  const AB = AJ.abas(T, CARDS), aj = ['; gerado por build.js - ajuda da pausa (gerador/ajuda.js)'];
+  const pags = [];
+  AB.forEach((a, i) => {
+    cabe('ajuda: aba ' + a.nome, a.nome, 22, 1);
+    aj.push(`AJN_${i}:\n${byteLines(F.compile(a.nome))}`);
+    a.paginas.forEach((p, j) => {
+      cabe(`ajuda: ${a.nome} pagina ${j + 1}`, p.txt, AJ.LARG, AJ.LINHAS);
+      const n = pags.length;
+      pags.push(p);
+      aj.push(`AJP_${n}:\n${byteLines(F.compile(p.txt))}`, `AJQ_${n}:\n${byteLines(F.compile(`${j + 1}/${a.paginas.length}`))}`);
+    });
+  });
+  let ini = 0;
+  aj.push('AjNome: .word ' + AB.map((_, i) => `.loword(AJN_${i})`).join(', '));
+  aj.push('AjPagIni: .byte ' + [...AB.map((a) => { const r = ini; ini += a.paginas.length; return r; }), ini].join(', '));
+  aj.push('AjPagTxt: .word ' + pags.map((_, n) => `.loword(AJP_${n})`).join(', '));
+  aj.push('AjPagNum: .word ' + pags.map((_, n) => `.loword(AJQ_${n})`).join(', '));
+  aj.push('AjPagDes: .byte ' + pags.map((p) => (p.desenho ? 1 : 0)).join(', '));
+  w('ajuda.inc', aj.join('\n') + '\n');
+}
 data.push('MissionTxt:\n' + Array.from({ length: 15 }, (_, i) => `  .word TXT_MIS_${i}`).join('\n'));
 data.push('ShopName:\n' + Array.from({ length: 20 }, (_, i) => `  .word TXT_S_${i}`).join('\n'));
 data.push('ShopDesc:\n' + Array.from({ length: 20 }, (_, i) => `  .word TXT_SD_${i}`).join('\n'));

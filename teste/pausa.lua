@@ -29,9 +29,9 @@ emu.addEventCallback(function()
       if r8("d_paused") ~= 1 or r8("dim_on") ~= 2 then ok = false; log("ERRO: pausa nao abriu no balao") end
       foto("continuar"); fase, t = 2, 0
     end
-  elseif fase == 2 then apertar = (t <= 4) and "down" or nil
+  elseif fase == 2 then apertar = (t <= 4) and "up" or nil   -- cima no primeiro item da a volta ate SAIR
     if t == 40 then
-      if r8("pause_sel") ~= 1 then ok = false; log("ERRO: cursor nao desceu") end
+      if r8("pause_sel") ~= 2 then ok = false; log("ERRO: cima nao foi para SAIR") end
       foto("sair"); fase, t = 3, 0
     end
   elseif fase == 3 then apertar = (t <= 4) and "b" or nil
