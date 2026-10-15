@@ -17,9 +17,10 @@ Lista de trabalho pendente. Antes de cada item, reler as regras do `CLAUDE.md` (
 
 - [x] **Acentos faltando em textos.** Ex.: "LUCRO DOS ULTIMOS DIAS" (ÚLTIMOS), carta `EV_CRITICO` ("CRITICO GASTRONOMICO" → CRÍTICO GASTRONÔMICO). Revisar todo `gerador/textos.js` procurando palavras sem acento.
 
-- [ ] **Acento agudo quase invisível na fonte.** No `Ú` (`gerador/fonte.js`), o acento é um único pixel (linha 0, coluna 3) colado na perna direita do U. Com o contorno e a sombra da fonte, parece só uma perna mais alta, e "ÚLTIMOS" (gráfico do fim do dia) e "MÚSICA" (opções) ficam parecendo sem acento.
+- [x] **Acento agudo quase invisível na fonte.** No `Ú` (`gerador/fonte.js`), o acento é um único pixel (linha 0, coluna 3) colado na perna direita do U. Com o contorno e a sombra da fonte, parece só uma perna mais alta, e "ÚLTIMOS" (gráfico do fim do dia) e "MÚSICA" (opções) ficam parecendo sem acento.
   - `Á`, `É`, `Í` e `Ó` usam o mesmo pixel `...#.` logo acima do corpo da letra, então provavelmente têm o mesmo problema. Conferir todos em captura ampliada (o `Ç` e os acentos `^`/`~` parecem estar bem).
   - Correção: redesenhar os glifos acentuados para o acento ficar separado do corpo por uma linha vazia (por exemplo, encurtar o corpo da letra em 1 pixel, como já fazem `Ã`/`Â`/`Ê`), com um traço inclinado de 2 pixels. Os glifos são 5×7 num tile 8×8 com contorno e sombra, então conferir que nada passa do tile.
+  - Feito: `Á` `À` `É` `Í` `Ó` `Ú` com traço de 2 pixels na linha 0 (`...##`; `##...` no `À`), linha vazia e corpo de 5 linhas, no padrão de `Ã`/`Â`/`Ê`. O traço inclinado em 2 linhas deixava o corpo com 4 linhas e a letra parecia minúscula.
 
 - [x] **Gráfico "LUCRO DOS ÚLTIMOS DIAS" só mostra a barra do primeiro dia.** Os rótulos dos dias (1, 2, 3…) aparecem, mas só a primeira barra é desenhada.
   - Causa (`DrawChart` em `src/banco28.s`): o passo da escala (valor de cada bloco = maior lucro / 8) fica em `tmp2`, mas o rótulo do dia embaixo de cada barra é impresso com `PrintNum` → `PrintStr`, que usa `tmp2` como variável de trabalho (`sta tmp2` em `PrintStrB`, `src/main.s`). Depois do primeiro rótulo, o passo vira ~1400 e as barras seguintes ficam com altura 0.
