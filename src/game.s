@@ -397,41 +397,90 @@ DrawHud:
 :   rts
 
 ; ---------------------------------------------------------------- pausa
+; mesmo balao creme do tutorial (dim_on = 2: TutNmi/TutSprites); um emoji por item
+; (PauseSprites, depois do TutSprites) e rodape em pilula
+PA_LIN0 = 11                ; linha do primeiro item (o segundo fica 2 abaixo)
+
 PauseDraw:
     .a8
     .i16
-    lda #12
-    jsr ClearRow
-    lda #13
-    jsr ClearRow
-    lda #14
-    jsr ClearRow
-    lda #15
-    jsr ClearRow
-    PRINT TXT_PAUSA, 11, 12, 1
-    PRINT TXT_PA_CONT, 9, 13, 0
-    PRINT TXT_PA_SAIR, 9, 14, 0
-    PRINT TXT_PA_AVISO, 3, 15, 3
-    A16
+    jsr TutBoxClear
+    PRINT TXT_PAUSA, 4, 9, 5
+    ; itens: o escolhido em vermelho
+    ldy #((4<<2)|$20)
     lda pause_sel
+    bne :+
+    ldy #((5<<2)|$20)
+:   sty txt_attr
+    ldx #(PA_LIN0*32+7)
+    stx txt_pos
+    ldx #TXT_PA_CONT
+    jsr PrintStr
+    ldy #((4<<2)|$20)
+    lda pause_sel
+    beq :+
+    ldy #((5<<2)|$20)
+:   sty txt_attr
+    ldx #((PA_LIN0+2)*32+7)
+    stx txt_pos
+    ldx #TXT_PA_SAIR
+    jsr PrintStr
+    lda pause_sel
+    beq :+
+    PRINT TXT_PA_AVISO, 4, PA_LIN0+4, 4
+:   ldx #TXT_TIT_AJ
+    lda #(PA_LIN0+6)
+    jmp Footer
+
+; icones dos itens (chamada pelo TutSprites, depois de esconder os sprites do jogo)
+PauseSprites:
+    .a8
+    .i16
+    lda #0
+@l: pha
+    A16
+    lda #32
+    sta spr_x
+    lda 1,s
     and #$00FF
-    clc
-    adc #13
-    asl a
-    asl a
-    asl a
-    asl a
-    asl a
-    clc
-    adc #7
     asl a
     tax
+    lda PauseIco,x
+    sta spr_tile
     A8
-    lda #FONT_ARROW
-    sta bg3_buf,x
-    lda #((1<<2)|$20)
-    sta bg3_buf+1,x
+    lda 1,s                 ; y = (PA_LIN0 + 2 * item) * 8 - 4
+    asl a
+    asl a
+    asl a
+    asl a
+    clc
+    adc #(PA_LIN0*8-4)
+    sta spr_y
+    lda 1,s
+    cmp pause_sel
+    bne :+
+    A16
+    lda frame
+    lsr a
+    and #$001F
+    tax
+    A8
+    lda f:UiBob,x
+    clc
+    adc spr_y
+    sta spr_y
+:   lda #$30
+    sta spr_attr
+    lda #1
+    sta spr_size
+    jsr AddSprite
+    stz spr_size
+    pla
+    inc a
+    cmp #2
+    bne @l
     rts
+PauseIco: .word SPR_PAUSA_CONT, SPR_PAUSA_SAIR
 
 PauseMenu:
     .a8
@@ -445,6 +494,9 @@ PauseMenu:
     SFX SFX_CURSOR
     jsr PauseDraw
 :   lda pad_new+1
+    and #KH_B
+    bne @cont               ; B: volta ao jogo
+    lda pad_new+1
     and #KH_START
     bne @ok
     lda pad_new
@@ -454,16 +506,10 @@ PauseMenu:
 @ok:
     lda pause_sel
     bne @sair
+@cont:
     stz d_paused
     stz dim_on
-    lda #12
-    jsr ClearRow
-    lda #13
-    jsr ClearRow
-    lda #14
-    jsr ClearRow
-    lda #15
-    jsr ClearRow
+    jsr TutBoxClear
     SFX SFX_CURSOR
     rts
 @sair:
@@ -747,6 +793,7 @@ DayUpdate:
     beq :+
     lda #1
     sta d_paused
+    inc a                   ; balao do tutorial
     sta dim_on
     stz pause_sel
     jsr PauseDraw

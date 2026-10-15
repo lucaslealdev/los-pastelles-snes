@@ -870,4 +870,7 @@ TutSprites:
     inx
     inx
     bra @l
-@r: rts
+@r: lda d_paused            ; pausa: icones dos itens por cima do balao
+    beq :+
+    jmp PauseSprites
+:   rts

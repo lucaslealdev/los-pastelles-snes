@@ -237,6 +237,9 @@ function cabe(nome, txt, maxCol, maxLin) {
 }
 for (const [k, [, , b]] of Object.entries(CARDS)) cabe('carta ' + k, b, 26, 17);
 for (const [k, v] of Object.entries(T)) if (/^TB_B/.test(k)) cabe(k, v, 25, 6);
+// pausa (balao do tutorial): titulo e aviso na coluna 4, itens na 7 (depois do icone)
+for (const k of ['PAUSA', 'PA_AVISO']) cabe(k, T[k], 25, 1);
+for (const k of ['PA_CONT', 'PA_SAIR']) cabe(k, T[k], 22, 1);
 // missao ao lado do icone no fim do dia (DrawResults: coluna 5 ate 28)
 for (const [k, v] of Object.entries(T)) if (/^MIS_/.test(k)) cabe(k, v, 24, 1);
 

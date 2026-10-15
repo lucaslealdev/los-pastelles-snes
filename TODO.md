@@ -54,7 +54,8 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - L e R trocam de aba.
      - Mostrar ícones dos botões L e R ao lado das abas (criar tokens/sprites `{L}`/`{R}` no padrão de `{A}`/`{B}`, se ainda não existirem).
 
-5. - [ ] **Menu de pausa no estilo do tutorial.**
+5. - [x] **Menu de pausa no estilo do tutorial.**
+     - Feito: a pausa usa o balão do tutorial (`dim_on = 2`), com ▶️/🏠 ao lado dos itens (`PauseSprites`, chamada no fim do `TutSprites`), aviso só com SAIR escolhido e rodapé `{A}: ESCOLHER` em pílula. {B} volta ao jogo. Teste: `teste/pausa.lua`.
      - Redesenhar a pausa com o mesmo balão creme do tutorial (BG2 + janela + escurecimento via HDMA, como `TutBox`/`TutNmi`), um emoji por item e rodapé com pílula (`Footer`).
      - Mais trabalho que a loja: mexe com HDMA/janelas por cima do jogo e com o limite de sprites (esconder sprites sob o balão, como `TutSprites`).
 

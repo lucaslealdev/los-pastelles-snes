@@ -48,7 +48,7 @@ LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 teste/mesen/Mesen --testrunn
 ```
 
 - `teste/bot.lua` is a robot that plays the game by reading RAM. It resolves variable addresses by name from `gen/labels.txt` (ld65 `-Ln` output), so renaming a variable in `vars.inc` can break the bot. Its behavior is configured with `botcfg*.lua` (choose one by setting the `BOTCFG` global).
-- The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mao.lua` (screenshots of the held-item hand next to the cursor), `loja.lua` (one screenshot per shop tab), `resultado.lua`/`resultado_cheio.lua` (screenshots of both end-of-day pages; the second forces RAM values so every line shows), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
+- The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mao.lua` (screenshots of the held-item hand next to the cursor), `loja.lua` (one screenshot per shop tab), `pausa.lua` (pause menu screenshots; exits 1 if B doesn't resume), `resultado.lua`/`resultado_cheio.lua` (screenshots of both end-of-day pages; the second forces RAM values so every line shows), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
 - Each Lua script finds `teste/` from its own path via `debug.getinfo`. If Mesen doesn't expose `debug`, it falls back to the relative path `teste/`, so launch Mesen from the repo root. Other paths are built from that directory (`dir .. "../gen/labels.txt"`).
 - Outputs (`teste/*.png`, `teste/*.txt`) are gitignored.
 - Running Mesen 2 (Linux x64 build 2.1.1) here:
@@ -194,7 +194,7 @@ The generator modules:
 - **Banks:** `DemoSorteia` (with its own `DemoRand`) and `DemoIA` live in bank 28, called with `JSL` and returning with `RTL`, because bank 0 is full. They can only call routines in the same bank. RAM and the bank-0 tables are reachable through the DBR (`$80`).
 
 ### Emoji sprites
-`gerador/emoji_sprites.py` (Twemoji, cached in `arte_fonte/emoji/`) turns sprites that have a perfect emoji into 16×16 with the shop icons' outline: flavors 🥩 🧀 🍗 🥓, lock, anger, heart, coin, X, star, phone, computer, scooter, sparkle, fire and the palm-up hand 🫴 (`SPR_MAO`, drawn next to the cursor by `MaoSprites` in `banco28.s` with the held flavor/soda on its fingers).
+`gerador/emoji_sprites.py` (Twemoji, cached in `arte_fonte/emoji/`) turns sprites that have a perfect emoji into 16×16 with the shop icons' outline: flavors 🥩 🧀 🍗 🥓, lock, anger, heart, coin, X, star, phone, computer, scooter, sparkle, fire, the pause icons ▶️ 🏠 and the palm-up hand 🫴 (`SPR_MAO`, drawn next to the cursor by `MaoSprites` in `banco28.s` with the held flavor/soda on its fingers).
 - **Own pixel art:** an entry whose source ends in `.png` (path from the repo root) is a hand-made PNG instead of an emoji. Requeijão cremoso uses `arte_fonte/requeijao_cremoso.png` (a squeeze bag, 14×28). `pixel_art()` halves it by majority color per block (no blur) and redraws the outline, and its quantization keeps the hue (a saturated color only maps to a saturated palette color of a close hue), so the navy label stays blue.
 - **Colors:** they're quantized to the sprite's fixed palette (0 or 1), because during the day palettes 3–7 belong to the customers.
 - **Fallback:** sprites without a good emoji (calabresa, soda can, order bubble, smoke, mascot, pastéis, store) keep the hand-drawn art from `arte.js`.
@@ -226,6 +226,9 @@ Everything goes back to normal after the first delivery (`tut_step = $FF`). `tes
 - Window 1 hides BG1 inside the balloon. HDMA channel 6 limits the window to the balloon's rows.
 - HDMA channel 7 changes `CGADSUB` per line, so BG3 (the HUD) is darkened outside the balloon.
 - `TutSprites` lowers game sprites to priority 2 so they go behind the balloon (BG2 with high priority).
+
+### Pause menu (day)
+START during the day opens the pause in the same cream balloon as the tutorial (`dim_on = 2`, so `TutNmi` and `TutSprites` apply): `PauseDraw`/`PauseMenu` in `game.s`. Title on row 9, items on rows `PA_LIN0` and `PA_LIN0+2` (text at column 7), the "day isn't saved" warning only when SAIR is selected, and a `Footer` on row 17. Each item has a 16×16 emoji sprite (`SPR_PAUSA_CONT` ▶️, `SPR_PAUSA_SAIR` 🏠, from `emoji_sprites.py`), drawn by `PauseSprites`, which `TutSprites` calls at its end so the icons aren't hidden with the game sprites under the balloon. Up/down/SELECT switch items, A/START confirm, B resumes. `build.js` checks the widths of `PAUSA`/`PA_*`. `teste/pausa.lua` takes screenshots and checks that B resumes.
 
 ### Game loop and state machine
 `MainLoop` in `main.s` dispatches through the `StateInit`/`StateUpdate` jump tables (`src/telas.s`), indexed by `state`. The `ST_*` constants are defined at the top of `src/game.s` (title, intro, card, preday, day, results, shop, map, options, choose, slots, splash, trophies, secret). To change screens, write to `next_state`. The main loop runs the new state's Init once, then calls Update every frame, followed by `UiUpdate`, `AudioUpdate`, `WaitFrame` and `ReadPad`. NMI uploads OAM, palettes and VRAM from RAM buffers.

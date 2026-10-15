@@ -793,6 +793,9 @@ function buildSprites(emojis = {}) {
   put('MASCOTE_0', mascote(false), 1); put('MASCOTE_1', mascote(true), 1);
   for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'loja', 'franquia', 'estrela', 'refri', 'mao']) put(n.toUpperCase(), emo(n, () => icon(n)), 0);
   put('REFRI_P', refriP(), 0);
+  // menu de pausa: continuar e sair (sem emoji: triangulo e casinha simples)
+  put('PAUSA_CONT', emo('continuar', () => { const I = new Img(16, 16); I.rect(1, 1, 14, 14, 15); for (let j = 0; j < 8; j++) I.rect(5, 4 + j / 2 | 0, 1 + j, 8 - (j & ~1), 2); I.outline(1); return I; }), 0);
+  put('PAUSA_SAIR', emo('casa', () => { const I = new Img(16, 16); for (let j = 0; j < 6; j++) I.rect(7 - j, 1 + j, 2 + 2 * j, 1, 9); I.rect(3, 7, 10, 7, 14); I.rect(7, 10, 3, 4, 7); I.outline(1); return I; }), 0);
   { const b = new Img(8, 8); b.ell(1, 1, 6, 6, 13); b.ell(2, 2, 5, 5, 0); b.set(2, 2, 13); put('BOLHA', b, 1); }
   for (const b of ['U', 'D', 'L', 'R', 'A', 'B', 'X', 'Y', 'OK']) put('BTN_' + b, botao(b), 0);
   put('TELEFONE', emo('telefone', () => entrega('tel')), 0); put('MONITOR', emo('monitor', () => entrega('pc')), 0); put('MOTO', emo('moto', () => entrega('moto')), 0);

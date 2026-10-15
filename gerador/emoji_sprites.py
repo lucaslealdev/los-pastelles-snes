@@ -29,6 +29,8 @@ EMOJIS = {
     'brilho':   ('2728', 1),
     'fogo':     ('1f525', 1),
     'mao':      ('1faf4', 0),   # mao com a palma para cima (o que o jogador segura)
+    'continuar': ('25b6', 0),   # pausa: continuar (play)
+    'casa':     ('1f3e0', 0),   # pausa: sair para o titulo (casa, como na loja)
 }
 
 GEN = os.path.join(ROOT, 'gen')
