@@ -48,7 +48,7 @@ LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 teste/mesen/Mesen --testrunn
 ```
 
 - `teste/bot.lua` is a robot that plays the game by reading RAM. It resolves variable addresses by name from `gen/labels.txt` (ld65 `-Ln` output), so renaming a variable in `vars.inc` can break the bot. Its behavior is configured with `botcfg*.lua` (choose one by setting the `BOTCFG` global).
-- The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mao.lua` (screenshots of the held-item hand next to the cursor), `loja.lua` (one screenshot per shop tab), `pausa.lua` (pause menu screenshots; exits 1 if B doesn't resume), `resultado.lua`/`resultado_cheio.lua` (screenshots of both end-of-day pages; the second forces RAM values so every line shows), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
+- The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mao.lua` (screenshots of the held-item hand next to the cursor), `loja.lua` (one screenshot per shop tab), `pausa.lua` (pause menu screenshots; exits 1 if B doesn't resume), `loja_cenario.lua` (the day scene in all 5 neighborhoods × 3 renovations), `resultado.lua`/`resultado_cheio.lua` (screenshots of both end-of-day pages; the second forces RAM values so every line shows), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
 - Each Lua script finds `teste/` from its own path via `debug.getinfo`. If Mesen doesn't expose `debug`, it falls back to the relative path `teste/`, so launch Mesen from the repo root. Other paths are built from that directory (`dir .. "../gen/labels.txt"`).
 - Outputs (`teste/*.png`, `teste/*.txt`) are gitignored.
 - Running Mesen 2 (Linux x64 build 2.1.1) here:
@@ -126,6 +126,9 @@ The generator modules:
   - The pill disappears when the text in that position changes.
 - Reserved OAM slots (`vars.inc`): 100–111 for buttons (`OAM_BTN`), 112–127 for the pill (`OAM_PILL`). `AddSprite` stops at `OAM_BTN`. Lower slot numbers draw in front, which keeps the buttons over the pill.
 - `gerador/arte.js` and `gerador/gfx.js` contain all pixel art as code: scenes, sprites, palettes and 4bpp encoding. `shopScene(bairro, reforma)` gives 5 neighborhoods × 3 renovation stages.
+- Shop scene decorations made from emojis (window, plant, picture, city, bags, books, the showcase pastéis, sunflowers) come from `gerador/emoji_cenario.py`: `build.js` writes the 5 neighborhood palettes to `gen/shoppal.json`, the script resizes each Twemoji, adds the dark outline and quantizes it per neighborhood into `gen/emoji_cen.json`, and `shopScene` pastes it with `colaEmoji` (it reads the JSON itself, so run `node build.js` before `preview.js`).
+  - Shop palette (`PAL_SHOP`): colors 6 (wall) and 15 (detail) change per neighborhood (`SHOP_VAR`), 11 is green and 14 is blue for the emojis, and 12 blinks in game (`OilColor`), so the quantizer never uses 12. Only the elements in `COM_BAIRRO` may use 6/15.
+  - Sprites cover the kitchen wall (flavors, locks, cursor) and the wall behind the counter (customers), so decorations there get hidden; `teste/loja_cenario.lua` restarts the day with each neighborhood/renovation and saves `teste/foto_cen_<b>_<r>.png`.
 - `gerador/audio.js` contains the SPC700 driver blob and the chiptune songs and SFX.
 - `gerador/ui_tabs.js` builds the HDMA gradient and animation tables.
 - `gerador/logo.py` converts whichever root-level PNG has "pastelles" in its filename into the 15-color title logo.

@@ -49,6 +49,15 @@ const MENU_CHK_TILE = 1021;
 const CHK = A.menuChecker(MENU_CHK_TILE);
 w('menu_chk_tiles.bin', CHK.tiles); w('menu_chk_map.bin', CHK.map); w('chk_pal.bin', palBytes(A.PAL_MENU));
 
+// elementos do cenario da loja feitos de emoji (gerador/emoji_cenario.py; Python so quando mudam)
+fs.writeFileSync(path.join(GEN, 'shoppal.json'), JSON.stringify([0, 1, 2, 3, 4].map(A.shopPal)));
+try {
+  execFileSync(PY, [path.join('gerador', 'emoji_cenario.py')], { cwd: ROOT, stdio: 'inherit' });
+} catch (e) {
+  if (!fs.existsSync(path.join(GEN, 'emoji_cen.json'))) throw e;
+  console.warn('Python indisponivel: reutilizando os elementos do cenario ja gerados em gen/.');
+}
+
 const scenes = {
   logo: [logoImg, logoPal, null],
   shop0_0: [A.shopScene(0, 0), A.shopPal(0), (tx, ty) => ty >= 13 && ty <= 15],

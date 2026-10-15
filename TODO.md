@@ -69,7 +69,9 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Texto em várias páginas por aba se não couber (respeitar larguras; adicionar checagem no `build.js` como a do `cabe`).
      - **Cuidados:** roda por cima do expediente (balão BG2 + HDMA do tutorial), então a arte do controle disputa VRAM com o cenário e os sprites do dia, e o limite de 32 sprites / 34 tiles por linha vale para os botões desenhados. Avaliar desenhar o controle em BG2 (tiles próprios carregados ao abrir a ajuda e restaurados ao fechar) em vez de sprites. Banco 0 cheio: código e textos longos no banco 28 (as cartas já ficam no BANK11). Teste Lua com foto de cada aba.
 
-7. - [ ] **Cenário da loja com emojis.**
+7. - [x] **Cenário da loja com emojis.**
+     - Feito: `gerador/emoji_cenario.py` (como `emoji_sprites.py`) reduz e quantiza Twemoji na paleta de cada bairro; `shopScene` cola com `colaEmoji`. Janela 🪟 e vaso 🪴 (inicial), janela grande 🪟 e sacolas 🛍️ (centro comercial), quadro 🖼️ (residencial), livros 📚 junto da lousa (universitária), cidade 🏙️ na janela (empresarial), pastéis 🥟 na vitrine da reforma 1 e girassóis 🌻 nos vasos da reforma 2. A paleta da loja trocou a cor 11 (quase não usada) por verde e a 14 (creme quase igual à 3) por azul. Fotos: `teste/loja_cenario.lua`.
+     - Ficaram de fora: o chef 🧑‍🍳 (a parede da cozinha fica embaixo dos sabores/cadeados e do cursor, e o resto da parede é coberto pelos clientes) e o Fundador (o sprite é de costas; o emoji é de frente).
      - Substituir desenhos simples de `gerador/arte.js` por arte partindo de emojis ajustados à interface — por exemplo (mas não só): chef 🧑‍🍳, vaso de planta 🪴, janela 🪟. Revisar o cenário inteiro procurando outros elementos candidatos.
      - São 5 bairros × 3 reformas (`shopScene`); atenção a paleta e tamanho de banco.
      - Antes da HUD (item 9) porque a HUD nova deve combinar com o cenário novo.

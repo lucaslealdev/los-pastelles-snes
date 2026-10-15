@@ -14,9 +14,11 @@ function drawText(I, s, x, y, col, scale = 1) {
 function textWidth(s, scale = 1) { return s.length * 7 * scale; }
 
 // =================================================================== CENARIO: LOJA (jogo)
-// cores da marca (logo): creme, laranja, vermelho-alaranjado e marrom escuro
+// cores da marca (logo): creme, laranja, vermelho-alaranjado e marrom escuro, mais
+// verde (11, folhas) e azul (14, ceu/vidro) para os elementos feitos de emoji.
+// A cor 12 pisca no jogo (oleo da fritadeira, OilColor em game.s)
 const PAL_SHOP = [null, '#1C0A04', '#3A1A0C', '#FFF8EC', '#C8D0D8', '#7C8494', '#FDE9C4', '#FAA61E',
-  '#A85C28', '#5C3018', '#DA4804', '#8C2A04', '#E89A1C', '#7C5010', '#FDF1E0', '#48A048'];
+  '#A85C28', '#5C3018', '#DA4804', '#5C9C3C', '#E89A1C', '#7C5010', '#58A8E8', '#48A048'];
 // pastelzinho do letreiro (12x14)
 function miniPastel(I, x, y, A, a, K) {
   for (let j = 0; j < 14; j++) for (let i = 0; i < 12; i++) {
@@ -30,16 +32,36 @@ function miniPastel(I, x, y, A, a, K) {
 }
 // variacoes por bairro: trocam so as cores 6 (parede) e 15 (detalhe)
 const SHOP_VAR = [
-  { 6: '#FDE9C4', 15: '#48A048' },   // 0 bairro inicial
+  { 6: '#FDE9C4', 15: '#98D068' },   // 0 bairro inicial (15: folhas claras)
   { 6: '#D8E0E8', 15: '#78C8E8' },   // 1 centro comercial
   { 6: '#E8F0D0', 15: '#68A048' },   // 2 residencial
   { 6: '#E8C8A0', 15: '#2E5034' },   // 3 universitaria
   { 6: '#C8B8A8', 15: '#5878A8' },   // 4 empresarial
 ];
 function shopPal(v) { const p = PAL_SHOP.slice(); for (const k in SHOP_VAR[v]) p[k] = SHOP_VAR[v][k]; return p; }
+
+// elementos do cenario feitos de emoji (gerador/emoji_cenario.py -> gen/emoji_cen.json),
+// ja quantizados na paleta de cada bairro. build.js gera o arquivo antes dos cenarios
+let EMO_CEN = null;
+function emojiCenario(nome, v) {
+  if (!EMO_CEN) {
+    const arq = require('path').join(__dirname, '..', 'gen', 'emoji_cen.json');
+    EMO_CEN = JSON.parse(require('fs').readFileSync(arq, 'utf8'));
+  }
+  const e = EMO_CEN[`${nome}_${v}`];
+  if (!e) throw new Error('emoji do cenario nao gerado: ' + nome + ' (rode node build.js)');
+  return e;
+}
+// cola o emoji com o canto superior esquerdo em (x, y); cor 0 = transparente
+function colaEmoji(I, nome, v, x, y) {
+  const [w, h, p] = emojiCenario(nome, v);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (p[j * w + i]) I.set(x + i, y + j, p[j * w + i]);
+}
+
 function shopScene(v = 0, ref = 0) {
-  const K = 1, N = 2, W = 3, L = 4, G = 5, Y = 6, O = 7, B = 8, D = 9, R = 10, r = 11, A = 12, a = 13, T = 14, g = 15;
+  const K = 1, N = 2, W = 3, L = 4, G = 5, Y = 6, O = 7, B = 8, D = 9, R = 10, A = 12, a = 13, g = 15;
   const I = new Img(256, 224);
+  const emo = (nome, x, y) => colaEmoji(I, nome, v, x, y);
   // faixa superior (HUD)
   I.rect(0, 0, 256, 26, N); I.hline(0, 26, 256, D); I.hline(0, 27, 256, K);
   if (v === 0) {
@@ -50,61 +72,52 @@ function shopScene(v = 0, ref = 0) {
     I.hline(0, 82, 256, B); I.hline(0, 83, 256, D);
     I.rect(0, 84, 256, 20, O);
     for (let x = 0; x < 256; x += 16) I.vline(x, 84, 20, B);
-    // janelas (esquerda/direita)
-    for (const wx of [10, 198]) {
-      I.rect(wx, 34, 48, 40, D); I.rect(wx + 3, 37, 42, 34, L);
-      I.vline(wx + 23, 37, 34, D); I.vline(wx + 24, 37, 34, D); I.hline(wx + 3, 53, 42, D);
-      for (let k = 0; k < 8; k++) { I.set(wx + 6 + k, 46 - k, W); I.set(wx + 7 + k, 46 - k, W); I.set(wx + 28 + k, 66 - k, W); }
-      // vasinho de planta no peitoril
-      I.rect(wx + 4, 74, 40, 3, B); I.rect(wx + 18, 66, 12, 8, R); I.hline(wx + 18, 66, 12, r);
-      I.ell(wx + 16, 58, wx + 31, 67, g, (x, y) => y < 67);
+    // janelas 🪟 com vaso de planta 🪴 no peitoril
+    for (const wx of [10, 202]) {
+      emo('janela', wx, 33);
+      I.rect(wx - 2, 73, 48, 3, B); I.hline(wx - 2, 76, 48, D);
+      emo('planta', wx + 13, 56);
     }
   } else if (v === 1) {
-    // centro comercial: placas de porcelanato e vitrines de vidro
+    // centro comercial: placas de porcelanato, vitrines 🪟 e sacolas 🛍️
     I.rect(0, 28, 256, 56, Y);
     for (let y = 28; y < 84; y += 16) I.hline(0, y, 256, L);
     for (let x = 0; x < 256; x += 16) I.vline(x, 28, 56, L);
-    for (const wx of [8, 196]) {
-      I.rect(wx, 32, 52, 50, G); I.rect(wx + 2, 34, 48, 46, g);
-      I.vline(wx + 25, 34, 46, G); I.hline(wx + 2, 56, 48, G);
-      for (let k = 0; k < 10; k++) { I.set(wx + 6 + k, 50 - k, W); I.set(wx + 30 + k, 74 - k, W); }
-    }
     for (let x = 4; x < 256; x += 24) { I.rect(x, 29, 6, 2, W); }
+    for (const wx of [8, 196]) {
+      emo('vitrine', wx, 31);
+      emo('sacolas', wx + (wx < 128 ? 34 : -2), 63);
+    }
     I.hline(0, 82, 256, G); I.hline(0, 83, 256, K);
     I.rect(0, 84, 256, 20, L); for (let x = 0; x < 256; x += 32) I.vline(x, 84, 20, G); I.hline(0, 94, 256, G);
   } else if (v === 2) {
-    // residencial: papel de parede listrado, quadros e luminaria
+    // residencial: papel de parede listrado e quadros 🖼️
     I.rect(0, 28, 256, 56, Y);
     for (let x = 0; x < 256; x += 12) { I.vline(x, 28, 56, g); I.vline(x + 1, 28, 56, g); }
-    for (const [fx, fw] of [[10, 44], [202, 44]]) {
-      I.rect(fx, 36, fw, 34, B); I.rect(fx + 3, 39, fw - 6, 28, T);
-      I.ell(fx + 4, 50, fx + 26, 74, g, (x, y) => y < 67); I.ell(fx + 18, 54, fx + fw - 4, 74, B, (x, y) => y < 67);
-      I.ell(fx + fw - 14, 42, fx + fw - 8, 48, O);
-    }
+    for (const fx of [10, 202]) emo('quadro', fx, 35);
     I.hline(0, 82, 256, B); I.hline(0, 83, 256, D);
     I.rect(0, 84, 256, 20, B); for (let x = 0; x < 256; x += 8) I.vline(x, 84, 20, D);
   } else if (v === 3) {
-    // universitaria: parede de tijolos, lousa com o cardapio e bandeirinhas
+    // universitaria: parede de tijolos, lousa com o cardapio, livros 📚 e bandeirinhas
     I.rect(0, 28, 256, 56, Y);
     for (let y = 28; y < 84; y += 6) { I.hline(0, y, 256, O); for (let x = ((y / 6) & 1) * 8; x < 256; x += 16) I.vline(x, y, 6, O); }
     for (const bx of [8, 196]) {
       I.rect(bx, 34, 52, 42, B); I.rect(bx + 3, 37, 46, 36, g);
       drawText(I, 'MENU', bx + 9, 40, W);
-      for (let k = 0; k < 3; k++) { I.hline(bx + 7, 52 + k * 7, 20, W); I.hline(bx + 32, 52 + k * 7, 10, T); }
+      for (let k = 0; k < 3; k++) { I.hline(bx + 7, 52 + k * 7, 20, W); I.hline(bx + 32, 52 + k * 7, 10, A); }
+      I.rect(bx - 2, 76, 56, 2, D);                                   // aparador da lousa
+      emo('livros', bx + (bx < 128 ? 36 : -2), 61);
     }
     for (let x = 0; x < 256; x += 10) { for (let k = 0; k < 4; k++) I.hline(x + k, 29 + k, 8 - k * 2, (x / 10) & 1 ? R : O); }
     I.hline(0, 82, 256, B); I.hline(0, 83, 256, D);
     I.rect(0, 84, 256, 20, O); for (let x = 0; x < 256; x += 16) I.vline(x, 84, 20, B);
   } else {
-    // empresarial: lambri escuro e janelas com predios
+    // empresarial: lambri escuro e janelas com a cidade 🏙️
     I.rect(0, 28, 256, 56, Y);
     for (let x = 0; x < 256; x += 32) { I.rect(x + 2, 30, 28, 52, B); I.frame(x + 2, 30, 28, 52, D); }
     for (const wx of [6, 194]) {
-      I.rect(wx, 32, 56, 46, K); I.rect(wx + 2, 34, 52, 42, g);
-      for (const [bx, bh, bw] of [[4, 26, 10], [16, 34, 9], [27, 20, 12], [41, 30, 9]]) {
-        I.rect(wx + bx, 76 - bh, bw, bh, G);
-        for (let yy = 78 - bh; yy < 74; yy += 5) for (let xx = wx + bx + 2; xx < wx + bx + bw - 2; xx += 3) I.set(xx, yy, Y);
-      }
+      I.rect(wx, 32, 56, 46, K);
+      emo('cidade', wx + 2, 34);
       I.vline(wx + 28, 34, 42, K);
     }
     I.hline(0, 82, 256, D); I.hline(0, 83, 256, K);
@@ -112,34 +125,27 @@ function shopScene(v = 0, ref = 0) {
   }
   // letreiro LOS PASTELLES
   const sx = 66, sy = 31, sw = 124, sh = 28;
-  I.rect(sx - 2, sy - 2, sw + 4, sh + 4, K); I.rect(sx, sy, sw, sh, T); I.frame(sx + 1, sy + 1, sw - 2, sh - 2, N); I.frame(sx + 3, sy + 3, sw - 6, sh - 6, O);
+  I.rect(sx - 2, sy - 2, sw + 4, sh + 4, K); I.rect(sx, sy, sw, sh, W); I.frame(sx + 1, sy + 1, sw - 2, sh - 2, N); I.frame(sx + 3, sy + 3, sw - 6, sh - 6, O);
   const t1 = 'LOS', t2 = 'PASTELLES';
   drawText(I, t1, sx + ((sw - textWidth(t1)) >> 1), sy + 5, O); drawText(I, t1, sx + ((sw - textWidth(t1)) >> 1) - 1, sy + 4, R);
   drawText(I, t2, sx + ((sw - textWidth(t2)) >> 1), sy + 16, O); drawText(I, t2, sx + ((sw - textWidth(t2)) >> 1) - 1, sy + 15, N);
   miniPastel(I, sx + 8, sy + 7, A, a, K); miniPastel(I, sx + sw - 20, sy + 7, A, a, K);
-  // luminarias
-  for (const lx of [44, 128, 212]) { if (lx === 128) continue; }
-  // cardapio na parede (lousa)
   // balcao
   I.rect(0, 104, 256, 6, L); I.hline(0, 104, 256, W); I.hline(0, 109, 256, G); I.hline(0, 110, 256, K);
   I.rect(0, 111, 256, 17, B); I.hline(0, 119, 256, D);
   for (let x = 8; x < 256; x += 32) { I.vline(x, 111, 17, D); }
   I.hline(0, 127, 256, K);
-  // ---------- reforma nivel 2: vitrine de vidro com pasteis no balcao
+  // ---------- reforma nivel 2: vitrine de vidro com pasteis 🥟 no balcao
   if (ref >= 1) {
     I.rect(0, 111, 256, 16, D);
     for (let x = 3; x < 250; x += 63) {
       I.rect(x, 112, 59, 14, L); I.frame(x, 112, 59, 14, K);
-      for (let k = 0; k < 4; k++) {
-        const px = x + 4 + k * 14;
-        I.rect(px, 118, 11, 6, A); I.frame(px, 118, 11, 6, a);
-        for (let c = 0; c < 11; c += 2) I.set(px + c, 118, Y);
-      }
       I.hline(x + 1, 116, 57, G);
-      for (let k = 0; k < 6; k++) { I.set(x + 6 + k, 113 + k, W); I.set(x + 30 + k, 113 + k, W); }
+      for (let k = 0; k < 4; k++) emo('pastel', x + 2 + k * 14, 117);
+      for (let k = 0; k < 4; k++) { I.set(x + 6 + k, 113 + k, W); I.set(x + 30 + k, 113 + k, W); }
     }
   }
-  // ---------- reforma nivel 3: bandeirinhas, flores e letreiro dourado
+  // ---------- reforma nivel 3: bandeirinhas, flores 💐 e letreiro dourado
   if (ref >= 2) {
     // varal de bandeirinhas de festa
     for (let x = 0; x < 256; x++) I.set(x, 30 + Math.round(Math.sin(x / 40) * 2), K);
@@ -152,13 +158,12 @@ function shopScene(v = 0, ref = 0) {
     I.frame(sx - 3, sy - 3, sw + 6, sh + 6, A); I.frame(sx - 4, sy - 4, sw + 8, sh + 8, a);
     // vasos de flores nas pontas do balcao
     for (const fx of [0, 238]) {
-      I.rect(fx + 3, 92, 13, 12, B); I.hline(fx + 3, 92, 13, D); I.frame(fx + 3, 92, 13, 12, K);
-      I.ell(fx, 78, fx + 8, 86, R); I.ell(fx + 8, 75, fx + 17, 84, Y); I.ell(fx + 4, 83, fx + 13, 92, O);
-      I.set(fx + 4, 82, W); I.set(fx + 12, 79, W); I.set(fx + 8, 87, Y);
+      emo('flores', fx, 73);
+      I.rect(fx + 3, 93, 13, 11, B); I.hline(fx + 3, 93, 13, D); I.frame(fx + 3, 93, 13, 11, K);
     }
   }
-  // cozinha: azulejos brancos  // cozinha: azulejos brancos
-  I.rect(0, 128, 256, 56, T);
+  // cozinha: azulejos brancos
+  I.rect(0, 128, 256, 56, W);
   for (let y = 128; y < 184; y += 8) I.hline(0, y, 256, L);
   for (let x = 0; x < 256; x += 8) I.vline(x, 128, 56, L);
   // mesa dos ingredientes
@@ -185,11 +190,11 @@ function shopScene(v = 0, ref = 0) {
     I.rect(bx + 9, 168, 6, 6, K); I.rect(bx + 10, 169, 4, 4, R); I.set(bx + 10, 169, Y);
   }
   // chao xadrez
-  for (let y = 184; y < 200; y += 8) for (let x = 0; x < 256; x += 8) I.rect(x, y, 8, 8, ((x + y) >> 3) & 1 ? R : T);
+  for (let y = 184; y < 200; y += 8) for (let x = 0; x < 256; x += 8) I.rect(x, y, 8, 8, ((x + y) >> 3) & 1 ? R : W);
   I.hline(0, 184, 256, K);
   // caixa termica de refrigerante
   I.rect(2, 180, 18, 18, K); I.rect(3, 181, 16, 16, R); I.rect(3, 181, 16, 4, W); I.rect(3, 189, 16, 2, W);
-  I.rect(7, 192, 8, 3, r);
+  I.rect(7, 192, 8, 3, N);
   // faixa inferior
   I.rect(0, 199, 256, 25, N); I.hline(0, 199, 256, D);
   return I;
