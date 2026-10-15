@@ -40,7 +40,7 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Mostrar um emoji de mão (✋/🫴) combinado com o emoji do que foi pego — sabor do recheio (🥩 🧀 🍗 🥓 etc.) ou pastel pronto do sabor X.
      - Objetivo: o jogador não precisar lembrar o que pegou nem qual pastel é qual (ex.: "pastel de queijo na mão").
      - Atualizar sempre que a mão mudar (pegar, montar, entregar, descartar); mão vazia não mostra nada (ou mão aberta vazia).
-     - Novo sprite: só a mão. Conferir em `game.s` quais estados de "mão" existem de fato. Preferir junto ao cursor (fixo na HUD seria refeito no item 8).
+     - Novo sprite: só a mão. Conferir em `game.s` quais estados de "mão" existem de fato. Preferir junto ao cursor (fixo na HUD seria refeito no item 9).
      - **Banco 0 está cheio** (hoje ~390 bytes livres no fim do RODATA, mas reservados): o código novo vai para o banco 28 (`src/banco28.s`, `JSL`/`RTL`, chamando o banco 0 com `FAR0`). Se precisar de bytes no banco 0, mover outra rotina grande para lá, como foi feito com `DrawChart`. Os sabores 8×8 já existem (`SPR_MINI` + sabor, tiles consecutivos).
 
 3. - [x] **Tela de fim do dia (resultados) modernizada.**
@@ -59,31 +59,41 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Redesenhar a pausa com o mesmo balão creme do tutorial (BG2 + janela + escurecimento via HDMA, como `TutBox`/`TutNmi`), um emoji por item e rodapé com pílula (`Footer`).
      - Mais trabalho que a loja: mexe com HDMA/janelas por cima do jogo e com o limite de sprites (esconder sprites sob o balão, como `TutSprites`).
 
-6. - [ ] **Cenário da loja com emojis.**
+6. - [ ] **Ajuda dentro do menu de pausa.** *(depende do 4 e do 5)*
+     - Nova opção **AJUDA** no menu de pausa (`PauseDraw`/`PauseMenu` em `src/game.s`), entre CONTINUAR e SAIR, com ícone emoji como os outros itens (ex.: ❓ ou 📖).
+     - Abas trocadas com {L}/{R}, no padrão da loja com abas (item 4: barra com `{L}`/`{R}` e pílula atrás da aba escolhida); {B} volta para a pausa. Abas:
+       1. **CONTROLES:** ilustração de um controle de **Super Famicom** (botões coloridos vermelho/amarelo/azul/verde, L/R, START/SELECT, cruz) com a função de cada botão no jogo ligada a ele (cruz: cursor; {A}: fritar/tirar/entregar; {B}: jogar fora; {X}: refrigerante; {Y}: comanda/entrega; START: pausa). Conferir os controles reais em `DayInput` e no `LEIAME.md`.
+       2. **COMO JOGAR:** o ciclo de um pedido (balão do cliente → sabor → minijogo → fritadeira → ponto verde → entregar), cru/queimado, paciência, combo, entregas.
+       3. **NÍVEIS:** o que cada nível libera (sabores, cestos, itens da loja, entregas, desafios). Tirar os números do código (`PLock`/`ITEM_UNICO` em `ItemPrice`, cartas `UN_*`/`CAP_*`, sabores por nível) para não divergir; de preferência gerar a tabela em `build.js` a partir de uma fonte única.
+       4. **EVOLUÇÃO:** como a pastelaria cresce: dinheiro, reputação, estoque, melhorias da loja, reforma, novas lojas e franquias, mapa e a meta de 10 unidades.
+     - Texto em várias páginas por aba se não couber (respeitar larguras; adicionar checagem no `build.js` como a do `cabe`).
+     - **Cuidados:** roda por cima do expediente (balão BG2 + HDMA do tutorial), então a arte do controle disputa VRAM com o cenário e os sprites do dia, e o limite de 32 sprites / 34 tiles por linha vale para os botões desenhados. Avaliar desenhar o controle em BG2 (tiles próprios carregados ao abrir a ajuda e restaurados ao fechar) em vez de sprites. Banco 0 cheio: código e textos longos no banco 28 (as cartas já ficam no BANK11). Teste Lua com foto de cada aba.
+
+7. - [ ] **Cenário da loja com emojis.**
      - Substituir desenhos simples de `gerador/arte.js` por arte partindo de emojis ajustados à interface — por exemplo (mas não só): chef 🧑‍🍳, vaso de planta 🪴, janela 🪟. Revisar o cenário inteiro procurando outros elementos candidatos.
      - São 5 bairros × 3 reformas (`shopScene`); atenção a paleta e tamanho de banco.
-     - Antes da HUD (item 8) porque a HUD nova deve combinar com o cenário novo.
+     - Antes da HUD (item 9) porque a HUD nova deve combinar com o cenário novo.
 
-7. - [ ] **Mapa da expansão redesenhado.**
+8. - [ ] **Mapa da expansão redesenhado.**
      - Refazer a arte do mapa (`mapScene` em `gerador/arte.js`, tela `ST_MAP`) com mais qualidade: visual moderno de 16 bits, sem cara de desenho de Paint feito por criança.
      - Usar emojis (Twemoji, como o resto do projeto) para os elementos do mapa (lojas, franquias, prédios, árvores, rios, estradas etc.).
      - Antes de desenhar, gerar com o Gemini uma arte conceitual em pixel art 16 bits como referência de composição, cores e estilo; a arte final continua gerada por código em `gerador/`.
      - Atenção à paleta (BG em 4bpp, 15 cores por paleta) e ao tamanho do banco onde o mapa fica.
 
-8. - [ ] **HUD do dia mais moderno.** *(depois do 2, do 6 e do 7)*
+9. - [ ] **HUD do dia mais moderno.** *(depois do 2, do 7 e do 8)*
      - Trocar a HUD atual por balões (estilo do balão do tutorial / pílula), ícones de emoji (moeda, relógio, estrela etc.) e texto estilizado.
      - Cuidado com o limite de 32 sprites / 34 tiles por linha durante o jogo e com as paletas de sprite 3–7, que são dos clientes. Reservar espaço/sprites para os indicadores dos itens 1 e 2.
 
-9. - [ ] **Animação grande da montagem do pastel (minigame).**
+10. - [ ] **Animação grande da montagem do pastel (minigame).**
      - Pelo menos 5 quadros-chave da montagem (massa → recheio → dobra → fechamento → pastel pronto), exibidos grandes na tela.
-     - Cada acerto de botão sorteado avança a animação; errar desvia para o desfecho de erro (item 10).
+     - Cada acerto de botão sorteado avança a animação; errar desvia para o desfecho de erro (item 11).
      - Arte baseada em emojis/glyphs da internet (Twemoji, como o resto do projeto), com quadros intermediários gerados por morph entre os quadros-chave para suavizar o movimento.
-     - Gerar tudo por script em `gerador/` (como `emoji_sprites.py`); verificar espaço em banco/VRAM. Montar o gerador de morph de forma reutilizável para o item 10.
+     - Gerar tudo por script em `gerador/` (como `emoji_sprites.py`); verificar espaço em banco/VRAM. Montar o gerador de morph de forma reutilizável para o item 11.
 
-10. - [ ] **Animação de erro: pastel indo para a lixeira.** *(depende do 9)*
-      - Quando a montagem falhar, mostrar o pastel caindo numa lixeira 🗑️. Mesmo método: emojis, 5 quadros-chave + morphs, reaproveitando o gerador e o player de animação do item 9.
+11. - [ ] **Animação de erro: pastel indo para a lixeira.** *(depende do 10)*
+      - Quando a montagem falhar, mostrar o pastel caindo numa lixeira 🗑️. Mesmo método: emojis, 5 quadros-chave + morphs, reaproveitando o gerador e o player de animação do item 10.
 
-11. - [ ] **Sistema de password (salvar sem SRAM).** *(depois do 4: o password aparece na loja)*
+12. - [ ] **Sistema de password (salvar sem SRAM).** *(depois do 4: o password aparece na loja)*
       - **Uma única ROM.** No boot, detectar se o cartucho tem SRAM: gravar e reler dois padrões diferentes (ex.: `$55`/`$AA`) num endereço de SRAM, sem confiar em open bus, e restaurar o byte original. Guardar o resultado numa variável (ex.: `tem_sram`).
         - **Com SRAM:** mantém carregar/salvar como hoje **e** as opções de password (carregar password e depois salvar na SRAM, ou jogo novo na SRAM e depois ver o password dele).
         - **Sem SRAM:** só password. Esconder as opções de slot/salvar e não tentar ler/gravar SRAM.
@@ -98,7 +108,7 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
       - Opções de jogo (`OPT_SRAM`) e troféus: decidir se entram no password ou ficam só na SRAM.
       - Código em outro banco (banco 0 cheio). Teste Lua: gerar password, carregar e comparar o bloco do save; testar também o boot sem SRAM.
 
-12. - [ ] **Vozes com taxa maior (mais qualidade).** *(por último: as melhorias acima adicionam CPU por quadro e mudam o orçamento do barramento)*
+13. - [ ] **Vozes com taxa maior (mais qualidade).** *(por último: as melhorias acima adicionam CPU por quadro e mudam o orçamento do barramento)*
       - Objetivo: subir a taxa das vozes gravadas. A música tema (`VOZ_TEMA`, 10 kHz) já está boa; **não mexer nela**.
       - **Falas em stream** (10 kHz, voz 7 / anel B): o limite é o barramento. Hoje o dia tem ~170–180 bytes/quadro de folga, e música + fala usam ~94 + 94. Para subir a fala, liberar tempo de CPU por quadro otimizando o que compete com o `Bomba` (lógica do dia, montagem de OAM, uploads na NMI, `BtnSprites`/`PillSprites`, etc.). Perfilar antes (skill `snes-otimizacao`, Mesen) para achar os maiores consumidores.
       - Outras ideias: aumentar `LOTE_MAX`, acelerar o laço do `Bomba`, dar prioridade maior à fala enquanto toca, ajustar colchões (0,5 s música / 0,15 s fala).
