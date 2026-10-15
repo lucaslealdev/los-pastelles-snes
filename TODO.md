@@ -47,7 +47,8 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Usar emojis no lugar de rótulos e cortar texto sempre que um ícone + número bastar.
      - Tela isolada, fora do dia (sem disputa de sprites com clientes); usa os ícones emoji já existentes (`IconeSprite`/`ICO_*`).
 
-4. - [ ] **Loja do caixa com abas por tipo de item.**
+4. - [x] **Loja do caixa com abas por tipo de item.**
+     - Feito: 4 abas (DIA, LOJA, EQUIPE, REDE; `ShopOrd`/`ShopAbaIni` em `src/telas.s`), sem rolagem (até 6 itens por aba). L/R (e ◀/▶) trocam de aba; barra com `{L}`/`{R}` (tokens novos) e pílula atrás da aba escolhida. Fotos: `teste/loja.lua`.
      - Agrupar os 19 itens da loja (`ShopName`/`ShopDesc`) por categoria, uma aba por grupo.
      - L e R trocam de aba.
      - Mostrar ícones dos botões L e R ao lado das abas (criar tokens/sprites `{L}`/`{R}` no padrão de `{A}`/`{B}`, se ainda não existirem).

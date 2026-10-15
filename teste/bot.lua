@@ -108,7 +108,7 @@ emu.addEventCallback(function()
       if r8("d_paused") == 0 then b = "start" else tirou["pausa2"] = true; shot("pausa") end
     elseif st == 4 then b = botday()
     elseif st == 6 then
-      if r8("menu_sel") >= 12 and not tirou["lojarola"] then tirou["lojarola"] = true; shot("loja_rolando") end
+      if r8("shop_aba") == 1 and stf > 60 and not tirou["loja_aba"] then tirou["loja_aba"] = true; shot("loja_aba") end
       b = SHOP(r8, r16, f)
     elseif st == 7 then if f % 120 == 0 then b = "b" end
     elseif st == 8 then if f % 60 == 0 then b = "b" end

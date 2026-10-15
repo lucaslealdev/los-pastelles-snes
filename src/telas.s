@@ -1442,11 +1442,7 @@ ShopInit:
     PAL_LOAD IconPal, 176, 128
     jsr OamClear
     stz menu_msg
-    lda menu_sel
-    cmp #SH_N
-    bcc :+
-    stz menu_sel
-:   jsr ShopScroll
+    jsr ShopAcha
     jsr DrawShop
     jsr ShopSprite
     jsr ScreenOn
@@ -1690,16 +1686,75 @@ DrawShop:
     PRINTNUM16 s_stock, 11, 4, 7, 3
     PRINT TXT_HUD_DIA, 19, 4, 7
     PRINTNUM16 s_day, 23, 4, 7, 3
-    ; itens visiveis: menu_top .. menu_top+SH_VIS-1
-    lda menu_top
-@it:
-    sta loop_i
-    ; linha = 6 + 2 * (i - topo)  (16 px por item, com icone)
-    sec
-    sbc menu_top
+    ; abas: {L} DIA  LOJA  EQUIPE  REDE {R}; a escolhida em vermelho, com pilula
+    PRINT TXT_SH_L, 2, SH_LINABA, 4
+    PRINT TXT_SH_R, 28, SH_LINABA, 4
+    stz loop_j
+@ab:
+    A16
+    lda loop_j
+    and #$00FF
+    tay
+    asl a
+    tax
+    lda ShopAbaTxt,x
+    tax
+    lda ShopAbaCol,y
+    and #$00FF
+    clc
+    adc #(SH_LINABA*32)
+    sta txt_pos
+    asl a
+    sta tmp3                ; posicao no bg3_buf (para a pilula)
+    A8
+    ldy #((4<<2)|$20)
+    lda loop_j
+    cmp shop_aba
+    bne :+
+    ldy #((5<<2)|$20)
+:   sty txt_attr
+    jsr PrintStr
+    lda loop_j
+    cmp shop_aba
+    bne @abn
+    ldx tmp3
+    stx ft_pos
+    A16
+    lda loop_j
+    and #$00FF
+    tay
+    A8
+    lda ShopAbaCol,y        ; pilula: uma coluna antes do nome ate uma depois
+    dec a
+    asl a
+    asl a
+    asl a
+    sta ft_x0
+    lda ShopAbaLen,y
+    asl a
+    asl a
     asl a
     clc
-    adc #6
+    adc ft_x0
+    sta ft_x1
+    lda #(SH_LINABA*8 - 4)
+    sta ft_y
+    jsr PilulaLiga
+@abn:
+    inc loop_j
+    lda loop_j
+    cmp #SH_ABAS
+    bne @ab
+    ; itens da aba
+    stz loop_j
+@it:
+    jsr ShopItemPos
+    sta loop_i
+    ; linha = SH_LIN0 + 2 * posicao  (16 px por item, com icone)
+    lda loop_j
+    asl a
+    clc
+    adc #SH_LIN0
     sta loop_i+1
     A16
     and #$00FF
@@ -1836,27 +1891,11 @@ DrawShop:
     sta txt_attr
     jsr PrintStr
 @np8:
-    lda loop_i
-    inc a
-    cmp #SH_N
+    inc loop_j
+    jsr ShopAbaFaixa
+    cmp loop_j
     beq :+
-    sta tmp4
-    sec
-    sbc menu_top
-    cmp #SH_VIS
-    bcs :+
-    lda tmp4
     jmp @it
-:   ; setas de rolagem
-    lda menu_top
-    beq :+
-    PRINT TXT_SH_UP, 29, 6, 5
-:   lda menu_top
-    clc
-    adc #SH_VIS
-    cmp #SH_N
-    bcs :+
-    PRINT TXT_SH_DN, 29, 16, 5
 :   ; descricao
     A16
     lda menu_sel
@@ -1866,7 +1905,7 @@ DrawShop:
     lda ShopDesc,x
     tax
     A8
-    ldy #(19*32+3)
+    ldy #((SH_LIN0+12)*32+3)
     sty txt_pos
     lda #((7<<2)|$20)
     sta txt_attr
@@ -1881,7 +1920,7 @@ DrawShop:
     lda ShopMsgs-2,x
     tax
     A8
-    ldy #(23*32+3)
+    ldy #((SH_LIN0+16)*32+3)
     sty txt_pos
     lda #((5<<2)|$20)
     sta txt_attr
@@ -1896,24 +1935,122 @@ SH_TROF  = 17
 SH_MENU  = 18               ; voltar ao menu (titulo): salva e sai do jogo
 SH_ABRIR = 19
 SH_N     = 20
-SH_VIS   = 6               ; itens visiveis (a lista rola)
+SH_ABAS  = 4
+SH_LINABA = 6               ; linha da barra de abas
+SH_LIN0  = 8                ; linha do primeiro item
 
 ShopMsgs: .word TXT_SM_OK, TXT_SM_SEM, TXT_SM_BLOQ, TXT_SM_REP, TXT_SM_MAX, TXT_SM_ATIVO
+
+; abas da loja: itens (indices de ShopName) na ordem em que aparecem.
+; teste/botcfg.lua (SHOP_ABAS) repete esta tabela
+ShopOrd:
+    .byte 0, 3, SH_PRECO, SH_ABRIR, SH_MENU     ; DIA
+    .byte 1, 2, 10, 11, 12, 14                  ; LOJA
+    .byte 4, 9, 13, 8                           ; EQUIPE
+    .byte 5, 6, 7, SH_MAPA, SH_TROF             ; REDE
+ShopAbaIni: .byte 0, 5, 11, 15, SH_N            ; inicio de cada aba em ShopOrd (+ fim)
+ShopAbaTxt: .word TXT_SA_0, TXT_SA_1, TXT_SA_2, TXT_SA_3
+ShopAbaCol: .byte 4, 9, 15, 23                 ; colunas na barra (linha SH_LINABA)
+ShopAbaLen: .byte 3, 4, 6, 4
+
+; aba shop_aba: X = primeiro indice em ShopOrd, A = quantidade de itens
+ShopAbaFaixa:
+    .a8
+    .i16
+    A16
+    lda shop_aba
+    and #$00FF
+    tax
+    A8
+    lda ShopAbaIni+1,x
+    sec
+    sbc ShopAbaIni,x
+    pha
+    lda ShopAbaIni,x
+    A16
+    and #$00FF
+    tax
+    A8
+    pla
+    rts
+
+; A = item na posicao loop_j da aba atual
+ShopItemPos:
+    .a8
+    .i16
+    lda loop_j
+    bra ShopItemA
+
+; menu_sel = item na posicao shop_pos da aba atual
+ShopSelPos:
+    .a8
+    .i16
+    lda shop_pos
+    jsr ShopItemA
+    sta menu_sel
+    rts
+
+; A = posicao na aba atual -> A = item
+ShopItemA:
+    .a8
+    .i16
+    pha
+    jsr ShopAbaFaixa
+    txa
+    clc
+    adc 1,s
+    A16
+    and #$00FF
+    tax
+    A8
+    pla
+    lda ShopOrd,x
+    rts
+
+; acha a aba e a posicao do item menu_sel (item fora das abas: o primeiro)
+ShopAcha:
+    .a8
+    .i16
+    ldx #0
+:   lda ShopOrd,x
+    cmp menu_sel
+    beq :+
+    inx
+    cpx #SH_N
+    bne :-
+    ldx #0
+:   txa
+    sta tmp
+    ldy #0
+:   lda ShopAbaIni+1,y
+    cmp tmp
+    beq @prox
+    bcs @ok
+@prox:
+    iny
+    bra :-
+@ok:
+    tya
+    sta shop_aba
+    lda tmp
+    sec
+    sbc ShopAbaIni,y
+    sta shop_pos
+    jmp ShopSelPos
 
 ShopSprite:
     .a8
     .i16
     jsr OamClear
-    ; icones dos itens visiveis (o escolhido pula)
-    lda menu_top
-    sta loop_j
+    ; icones dos itens da aba (o escolhido pula)
+    stz loop_j
 @ic:
+    jsr ShopItemPos
     A16
-    lda #18
-    sta spr_x
-    lda loop_j
     and #$00FF
     tax
+    lda #18
+    sta spr_x
     A8
     lda f:IconPalTab,x
     asl a
@@ -1932,13 +2069,11 @@ ShopSprite:
     adc spr_tile
     sta spr_tile
     stz spr_tile+1
-    ; y = (6 + 2 * (i - topo)) * 8 - 4
+    ; y = (SH_LIN0 + 2 * posicao) * 8 - 5
     lda loop_j
-    sec
-    sbc menu_top
     asl a
     clc
-    adc #6
+    adc #SH_LIN0
     asl a
     asl a
     asl a
@@ -1946,7 +2081,7 @@ ShopSprite:
     sbc #5
     sta spr_y
     lda loop_j
-    cmp menu_sel
+    cmp shop_pos
     bne :+
     A16
     lda frame
@@ -1963,14 +2098,10 @@ ShopSprite:
     jsr AddSprite
     stz spr_size
     inc loop_j
-    lda loop_j
-    cmp #SH_N
-    beq :+
-    sec
-    sbc menu_top
-    cmp #SH_VIS
-    bcc @ic
-:   A16
+    jsr ShopAbaFaixa
+    cmp loop_j
+    bne @ic
+    A16
     lda #206
     sta spr_x
     A8
@@ -1981,53 +2112,68 @@ ShopSprite:
     jsr MascotFrame
     jmp AddSprite32
 
-; mantem o item escolhido dentro da janela visivel
-ShopScroll:
-    .a8
-    .i16
-    lda menu_sel
-    cmp menu_top
-    bcs :+
-    sta menu_top
-    rts
-:   sec
-    sbc #(SH_VIS-1)
-    bcc :+
-    cmp menu_top
-    bcc :+
-    sta menu_top
-:   rts
-
 ShopUpdate:
     .a8
     .i16
     jsr ShopSprite
+    ; L/R (ou esquerda/direita): troca de aba
+    lda pad_new
+    and #KL_L
+    bne @al
+    lda pad_new+1
+    and #KH_LEFT
+    beq @nl
+@al:
+    lda shop_aba
+    dec a
+    bpl :+
+    lda #(SH_ABAS-1)
+:   bra @aba
+@nl:
+    lda pad_new
+    and #KL_R
+    bne @ar
+    lda pad_new+1
+    and #KH_RIGHT
+    beq @nr
+@ar:
+    lda shop_aba
+    inc a
+    cmp #SH_ABAS
+    bcc @aba
+    lda #0
+@aba:
+    sta shop_aba
+    stz shop_pos
+    bra @mudou
+@nr:
     lda pad_new+1
     and #KH_UP
     beq @nu
-    lda menu_sel
+    lda shop_pos
     dec a
-    bpl :+
-    lda #(SH_N-1)
-:   sta menu_sel
-    stz menu_msg
-    jsr ShopScroll
-    SFX SFX_CURSOR
-    jsr DrawShop
+    bpl @pos
+    jsr ShopAbaFaixa
+    dec a
+    bra @pos
 @nu:
     lda pad_new+1
     and #KH_DOWN
     beq @nd
-    lda menu_sel
+    jsr ShopAbaFaixa
+    sta tmp
+    lda shop_pos
     inc a
-    cmp #SH_N
-    bcc :+
+    cmp tmp
+    bcc @pos
     lda #0
-:   sta menu_sel
+@pos:
+    sta shop_pos
+@mudou:
+    jsr ShopSelPos
     stz menu_msg
-    jsr ShopScroll
     SFX SFX_CURSOR
-    jsr DrawShop
+    jmp DrawShop
 @nd:
     lda pad_new
     and #KL_A

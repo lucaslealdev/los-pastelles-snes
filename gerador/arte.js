@@ -659,6 +659,7 @@ function botao(tipo) {
 const LETRA3 = {
   A: ['.#.', '#.#', '###', '#.#', '#.#'], B: ['##.', '#.#', '##.', '#.#', '##.'],
   X: ['#.#', '#.#', '.#.', '#.#', '#.#'], Y: ['#.#', '#.#', '.#.', '.#.', '.#.'],
+  L: ['#..', '#..', '#..', '#..', '###'], R: ['##.', '#.#', '##.', '#.#', '#.#'],
 };
 function botao8(tipo) {
   const k = 1, w = 2, g = 3, G = 4, y = 5, o = 6, r = 9, R = 10, n = 11, N = 12, u = 15;
@@ -673,6 +674,13 @@ function botao8(tipo) {
     const l = LETRA3[tipo], cl = tipo === 'B' ? k : w; // letra preta no amarelo (contraste)
     const lx = tipo === 'B' ? 3 : 2; // o B (aberto a direita) fica centrado 1 px adiante
     for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 3; xx++) if (l[yy][xx] === '#') I.set(xx + lx, yy + 1, cl);
+  } else if (tipo === 'L' || tipo === 'R') {
+    // botao de ombro: retangulo cinza arredondado, mais alto do lado de fora
+    I.rect(1, 0, 6, 8, k); I.rect(0, 1, 8, 7, k);
+    I.rect(1, 1, 6, 6, G); I.rect(1, 1, 6, 5, g);
+    I.set(tipo === 'L' ? 1 : 6, 1, w);
+    const l = LETRA3[tipo];
+    for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 3; xx++) if (l[yy][xx] === '#') I.set(xx + 3 - (tipo === 'L' ? 1 : 0), yy + 1, k);
   } else {
     // cruz direcional com o lado pedido aceso
     I.rect(2, 0, 4, 8, k); I.rect(0, 2, 8, 4, k);

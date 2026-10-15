@@ -81,10 +81,10 @@ const G = {
   '▶': ['#....', '##...', '###..', '####.', '###..', '##...', '#....'],
 };
 
-// botoes do controle no meio do texto: {A} {B} {X} {Y} {CIMA} {BAIXO} {ESQ} {DIR}
+// botoes do controle no meio do texto: {A} {B} {X} {Y} {CIMA} {BAIXO} {ESQ} {DIR} {L} {R}
 // viram glifos vazios (codigos FONT_BTN0..) e o jogo desenha por cima um sprite
 // colorido do botao (BtnSprites em ui.s), igual aos botoes do minijogo
-const BOTOES = ['A', 'B', 'X', 'Y', 'CIMA', 'BAIXO', 'ESQ', 'DIR'];
+const BOTOES = ['A', 'B', 'X', 'Y', 'CIMA', 'BAIXO', 'ESQ', 'DIR', 'L', 'R'];
 const btnChar = (i) => String.fromCharCode(0xE000 + i);
 BOTOES.forEach((_, i) => { G[btnChar(i)] = ['.....', '.....', '.....', '.....', '.....', '.....', '.....']; });
 

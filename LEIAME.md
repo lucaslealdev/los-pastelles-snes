@@ -33,7 +33,7 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 - 3 jogos salvos (NOVO JOGO / CONTINUAR abrem a escolha do espaço).
 - Tipos de cliente: criança (boné, tem pressa e paga meia), idoso (óculos, espera mais e dá gorjeta boa) e turista (chapéu de palha, pede o mais caro e paga R$ 3 a mais).
 - 16 troféus salvos no cartucho (loja: VER TROFÉUS).
-- Reforma do salão em 2 etapas (vitrine com pastéis no balcão; depois loja premium com bandeirinhas, flores e letreiro dourado) e novos itens: freezer, ar-condicionado, música ambiente e uniforme. A lista da loja rola (setas ↑↓).
+- Reforma do salão em 2 etapas (vitrine com pastéis no balcão; depois loja premium com bandeirinhas, flores e letreiro dourado) e novos itens: freezer, ar-condicionado, música ambiente e uniforme. A loja é dividida em abas (DIA, LOJA, EQUIPE, REDE): **L**/**R** (ou ◀/▶) trocam de aba.
 - Entregas (nível 6+): o telefone toca, aperte **Y** para anotar a comanda; com o pastel na mão, **Y** de novo para pôr no saco do motoboy (pastel + taxa de R$ 4). Na loja: **Computador (app)** no nível 13 (pedidos entram sozinhos, alguns com 2-3 pastéis) e **Motoboy extra** (prazo maior e taxa de R$ 6).
 - Animações: bolhas no óleo, moeda voando até o caixa, Fundador comemorando e clientes andando.
 - 6 sabores (carne, queijo, frango + calabresa, requeijão cremoso, bacon desbloqueáveis).

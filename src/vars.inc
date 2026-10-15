@@ -179,7 +179,8 @@ card_next:  .res 1
 
 ; menus
 menu_sel:   .res 1
-menu_top:   .res 1
+shop_aba:   .res 1      ; loja: aba escolhida
+shop_pos:   .res 1      ; loja: posicao do cursor na aba
 loop_i:     .res 2
 loop_j:     .res 1
 lock_lv:    .res 2

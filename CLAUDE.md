@@ -48,7 +48,7 @@ LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libstdc++.so.6 teste/mesen/Mesen --testrunn
 ```
 
 - `teste/bot.lua` is a robot that plays the game by reading RAM. It resolves variable addresses by name from `gen/labels.txt` (ld65 `-Ln` output), so renaming a variable in `vars.inc` can break the bot. Its behavior is configured with `botcfg*.lua` (choose one by setting the `BOTCFG` global).
-- The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mao.lua` (screenshots of the held-item hand next to the cursor), `resultado.lua`/`resultado_cheio.lua` (screenshots of both end-of-day pages; the second forces RAM values so every line shows), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
+- The other scripts are focused probes: `lag.lua` (frame lag), `tut.lua` (tutorial), `mao.lua` (screenshots of the held-item hand next to the cursor), `loja.lua` (one screenshot per shop tab), `resultado.lua`/`resultado_cheio.lua` (screenshots of both end-of-day pages; the second forces RAM values so every line shows), `mg.lua` (minigame), `fotos.lua`/`ui_fotos.lua` (screenshots), `trace.lua`, `ram.lua`, and `run.lua` (input script plus `cenario.lua`).
 - Each Lua script finds `teste/` from its own path via `debug.getinfo`. If Mesen doesn't expose `debug`, it falls back to the relative path `teste/`, so launch Mesen from the repo root. Other paths are built from that directory (`dir .. "../gen/labels.txt"`).
 - Outputs (`teste/*.png`, `teste/*.txt`) are gitignored.
 - Running Mesen 2 (Linux x64 build 2.1.1) here:
@@ -108,7 +108,7 @@ It has two commands:
 The generator modules:
 - `gerador/textos.js` defines every game string as `T` (key → text, uppercase, `\n` = new line) plus `CARDS`.
 - `gerador/fonte.js` turns text into tile codes with `compile()`. A character without a glyph throws at build time, so any new accented or special character needs a glyph in `G` first.
-- To show a controller button inside text, use the tokens `{A}` `{B}` `{X}` `{Y}` `{CIMA}` `{BAIXO}` `{ESQ}` `{DIR}` (never a bare letter):
+- To show a controller button inside text, use the tokens `{A}` `{B}` `{X}` `{Y}` `{CIMA}` `{BAIXO}` `{ESQ}` `{DIR}` `{L}` `{R}` (never a bare letter):
   - `compile()` turns each token into a transparent glyph (codes `FONT_BTN0`…`FONT_BTN0+N_BTN-1`).
   - `PrintStr`/`TypeStep` record its position via `BtnReg` in `ui.s`.
   - Every frame, `BtnSprites` draws a colored 8×8 button sprite (`SPR_BTN8_*`, sprite palette 0) over each recorded position that still holds the glyph.
@@ -180,6 +180,7 @@ The generator modules:
   - One row per item (`OPT_*`): icon, name, value between the d-pad buttons, a pulsing highlight band, an explanation of the selected item (`OptAjuda`) and a pill footer.
   - Items: difficulty, music (turns the recorded song on or off), speech (`opt_falas`: when off, `VozToca` plays nothing) and back.
   - Saved in SRAM at `OPT_SRAM`: `'O','P'`, difficulty, music, and speech as `$A0|value`. An old save without that byte defaults to speech on.
+- **Shop** (`ShopInit`/`DrawShop`/`ShopUpdate` in `telas.s`): the 20 items are split into 4 tabs (DIA, LOJA, EQUIPE, REDE) by `ShopOrd`/`ShopAbaIni`. L/R (or left/right) switch tabs, up/down move inside the tab (no scrolling: a tab holds at most 6 items). `menu_sel` is still the item index (`ShopName`, `ItemPrice`, `BuyFn`); `shop_aba`/`shop_pos` are derived from it by `ShopAcha` when the screen opens. The tab bar is row `SH_LINABA`, with `{L}`/`{R}` and a pill behind the selected tab. `teste/botcfg.lua` repeats the table in `SHOP_ABAS` (`SHOP_IR` drives the cursor to an item), and `teste/loja.lua` takes one screenshot per tab.
 - **Icons:** the emoji sheet (`gerador/icones.py`) is the shop's (items 0–19) plus the menus' (20–23); it holds 24 icons. Title, options and shop load `IconGfx` into OBJ tiles 0–95. The screens that use those tiles reload the sprites: `DayInit`, and `IntroInit` (the street).
 - **End-of-day screen** (`DrawResults`/`DrawChart` in `banco28.s`): a second sheet from `icones.py` (`ICONES_RES`, up to 24, `gen/icon_res_*`, `IconResPalTab`) replaces the labels with icons (`ICR_*`, drawn by `IcoRes`), loaded over the same OBJ tiles 0–95 and palettes 3–6. Left column = income (green), right = expenses (red); lines whose value is 0 (other stores, salaries) are hidden. `TxtEsq`/`NumEsq` print left-aligned and advance `txt_pos`. Mission texts must fit 24 characters next to the icon (`build.js` checks).
 
