@@ -15,7 +15,7 @@ Lista de trabalho pendente. Antes de cada item, reler as regras do `CLAUDE.md` (
   - Cuidar do caso sem dinheiro para comprar estoque (a loja não resolveria): definir saída (ex.: estoque mínimo de emergência).
   - Textos novos em `gerador/textos.js`, respeitando a largura das caixas; opções com `{A}`/`{CIMA}`/`{BAIXO}` e rodapé com `Footer`. Banco 0 cheio: código em outro banco.
 
-- [ ] **Acentos faltando em textos.** Ex.: "LUCRO DOS ULTIMOS DIAS" (ÚLTIMOS), carta `EV_CRITICO` ("CRITICO GASTRONOMICO" → CRÍTICO GASTRONÔMICO). Revisar todo `gerador/textos.js` procurando palavras sem acento.
+- [x] **Acentos faltando em textos.** Ex.: "LUCRO DOS ULTIMOS DIAS" (ÚLTIMOS), carta `EV_CRITICO` ("CRITICO GASTRONOMICO" → CRÍTICO GASTRONÔMICO). Revisar todo `gerador/textos.js` procurando palavras sem acento.
 
 ## Melhorias
 
