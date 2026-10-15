@@ -527,7 +527,7 @@ DrawChart:
     A16
     and #$00FF
     clc
-    adc #(22*32)
+    adc #(22*32-1)          ; campo de 3 a partir da coluna antes da barra: o numero fica embaixo dela
     sta txt_pos
     lda num+2
     sta num
@@ -537,7 +537,15 @@ DrawChart:
     sta txt_attr
     lda #3
     sta num_w
+    A16
+    lda tmp2                ; o passo: PrintStr usa tmp2
+    pha
+    A8
     FAR0 PrintNum
+    A16
+    pla
+    sta tmp2
+    A8
     inc loop_i
     jmp @bar
 @foot:
