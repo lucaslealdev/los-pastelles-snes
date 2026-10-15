@@ -3987,6 +3987,25 @@ DrawBaskets:
     lda #$32
     sta spr_attr
     jsr AddSprite
+    ; sabor (8x8) no vao a direita do pastel
+    ldx tmp3
+    lda f_flav,x
+    clc
+    adc #<SPR_MINI
+    sta spr_tile
+    lda #>SPR_MINI
+    sta spr_tile+1
+    lda tmp4
+    clc
+    adc #18
+    sta spr_x
+    stz spr_x+1
+    lda #(PASTEL_Y+4)
+    sta spr_y
+    lda #$30
+    sta spr_attr
+    stz spr_size
+    jsr AddSprite
     ; barra de fritura (cor: verde=perfeito, vermelho=queimado, amarelo=outros)
     lda tmp
     lsr a

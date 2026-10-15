@@ -727,6 +727,20 @@ function bar(level, fill) {
   return I;
 }
 
+// Reduz um icone 16x16 para 8x8: cada bloco 2x2 vira a cor mais comum (sem o
+// contorno), e o contorno escuro e refeito em volta. Usado no sabor ao lado da cesta.
+function mini(src) {
+  const o = new Img(8, 8);
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const n = {};
+    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const c = src.get(2 * x + i, 2 * y + j); if (c && c !== 1) n[c] = (n[c] || 0) + 1; }
+    const cs = Object.keys(n);
+    if (cs.length) o.set(x, y, +cs.reduce((a, b) => (n[b] > n[a] ? b : a)));
+  }
+  o.outline(1);
+  return o;
+}
+
 // ----- alocador da folha de sprites (16 tiles de largura x 32 de altura)
 // emojis: { nome: Img } de gerador/emoji_sprites.py (usados no lugar do desenho)
 function buildSprites(emojis = {}) {
@@ -761,7 +775,11 @@ function buildSprites(emojis = {}) {
   // retratos: faixa separada (128x32) carregada por cima dos clientes so nas cartas
   const portImg = new Img(128, 32);
   PORT_SPECS.forEach((sp, i) => { portImg.paste(person(sp), i * 32, 0); ids[`PORT_${i}`] = i * 4; });
-  ['carne', 'queijo', 'frango', 'calabresa', 'catupiry', 'bacon'].forEach((n, i) => put(`ICON_${i}`, emo(n, () => icon(n)), 0));
+  const minis = [];
+  ['carne', 'queijo', 'frango', 'calabresa', 'catupiry', 'bacon'].forEach((n, i) => {
+    const im = emo(n, () => icon(n));
+    put(`ICON_${i}`, im, 0); minis.push(mini(im));
+  });
   put('MASCOTE_0', mascote(false), 1); put('MASCOTE_1', mascote(true), 1);
   for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'loja', 'franquia', 'estrela', 'refri']) put(n.toUpperCase(), emo(n, () => icon(n)), 0);
   put('REFRI_P', refriP(), 0);
@@ -789,6 +807,19 @@ function buildSprites(emojis = {}) {
     for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) { const cc = b.get(i, j); if (cc) sheet.set(tx * 8 + i, ty * 8 + j, cc); }
   }
   ids.BAR_BASE = barBase;
+  // sabores 8x8 em tiles consecutivos (o jogo usa SPR_MINI + sabor, sem tabela)
+  let miniBase = -1;
+  for (let t = 16 * 16; t <= 512 - minis.length && miniBase < 0; t++) {
+    if ((t % 16) + minis.length > 16) continue;
+    let free = true; for (let i = 0; i < minis.length; i++) if (occ[t + i]) { free = false; break; }
+    if (free) miniBase = t;
+  }
+  if (miniBase < 0) throw new Error('sem espaco para os sabores 8x8');
+  minis.forEach((m, i) => {
+    const t = miniBase + i, tx = t % 16, ty = (t / 16) | 0; occ[t] = true;
+    for (let j = 0; j < 8; j++) for (let k = 0; k < 8; k++) { const c = m.get(k, j); if (c) sheet.set(tx * 8 + k, ty * 8 + j, c); }
+  });
+  ids.MINI = miniBase;
   // tiles 4bpp (cor sem paleta)
   const raw = new Img(128, 256); for (let i = 0; i < raw.p.length; i++) raw.p[i] = sheet.p[i] & 15;
   const tiles = []; for (let t = 0; t < 512; t++) tiles.push(enc4(tilePixels(raw, t % 16, (t / 16) | 0)));
