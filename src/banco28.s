@@ -2631,7 +2631,26 @@ SenhaInitL:
     FAR0 FadeOut
     FAR0 ScreenOff
     FAR0 LoadMenuScene
-    FAR0 OamClear
+    ; tecla escolhida (16x16) nos tiles 0, 1, 16 e 17 dos sprites (os icones dos
+    ; menus ficam ai; quem usa os icones recarrega a folha)
+    ldx #VRAM_OBJ
+    stx VMADDL
+    ldx #.loword(SenhaTecla)
+    stx dma_src
+    lda #^SenhaTecla
+    sta dma_src+2
+    ldx #64
+    stx dma_len
+    FAR0 DmaVram
+    ldx #(VRAM_OBJ + 16*16)
+    stx VMADDL
+    ldx #.loword(SenhaTecla+64)
+    stx dma_src
+    lda #^SenhaTecla
+    sta dma_src+2
+    ldx #64
+    stx dma_len
+    FAR0 DmaVram
     lda senha_modo
     bne @mostra
     stz pw_cur
@@ -2643,6 +2662,7 @@ SenhaInitL:
     lda #SENHA_N
     sta pw_cur
 @d: jsr SenhaDesenha
+    jsr SenhaSprite
     FAR0 ScreenOn
     FAR0 FadeIn
     rtl
@@ -2728,7 +2748,7 @@ SenhaLinhas:
     FAR0 PrintStr
     rts
 
-; teclado: a tecla escolhida em vermelho, com a faixa pulsante na linha dela
+; teclado: a tecla escolhida em vermelho, sobre o fundo de tecla (SenhaSprite)
 SenhaTeclado:
     .a8
     .i16
@@ -2779,8 +2799,37 @@ SenhaTeclado:
     inc a
     cmp #32
     bne @k
-    ; faixa: 16 linhas centradas na linha da tecla
-    lda pw_tecla
+    stz hl_y                ; sem faixa: o destaque e o fundo da tecla (SenhaSprite)
+    rts
+
+SenhaTecla: .incbin "gen/tecla_tiles.bin"
+
+; fundo da tecla escolhida: sprite 16x16 centrado na letra (o texto fica por cima)
+SenhaSprite:
+    .a8
+    .i16
+    FAR0 OamClear
+    lda senha_modo
+    bne @r
+    lda pw_tecla            ; x = (PW_TECC0 + 3 * (k % 8)) * 8 - 4
+    and #$07
+    sta tmp
+    asl a
+    clc
+    adc tmp
+    clc
+    adc #PW_TECC0
+    asl a
+    asl a
+    asl a
+    sec
+    sbc #4
+    A16
+    and #$00FF
+    sta spr_x
+    stz spr_tile
+    A8
+    lda pw_tecla            ; y = (PW_TECL0 + 2 * (k / 8)) * 8 - 4
     lsr a
     lsr a
     and #$FE
@@ -2791,14 +2840,19 @@ SenhaTeclado:
     asl a
     sec
     sbc #4
-    sta hl_y
-    lda #16
-    sta hl_h
-    rts
+    sta spr_y
+    lda #$30                ; prioridade 3, paleta 0
+    sta spr_attr
+    lda #1
+    sta spr_size
+    FAR0 AddSprite
+    stz spr_size
+@r: rts
 
 SenhaUpdateL:
     .a8
     .i16
+    jsr SenhaSprite
     lda senha_modo
     beq @dig
     lda pad_new

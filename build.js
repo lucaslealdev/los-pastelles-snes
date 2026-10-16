@@ -383,6 +383,10 @@ w('cards.inc', cards.join('\n') + '\n');
 }
 // password (gerador/senha.js): tabela de campos e alfabeto, lidos no banco 28
 {
+  // tecla escolhida do teclado (16x16): tiles na ordem de cima (0, 1) e de baixo (16, 17)
+  const { tilePixels, enc4 } = require('./gerador/gfx');
+  const tec = A.teclaSenha();
+  w('tecla_tiles.bin', Buffer.concat([[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => enc4(tilePixels(tec, x, y)))));
   const SE = require('./gerador/senha');
   w('senha.inc', SE.inc(F.CODE));
   console.log(`password: ${SE.N_SIMB} simbolos (${SE.BITS_P} bits de jogo + ${SE.BITS_VER} de verificacao)`);

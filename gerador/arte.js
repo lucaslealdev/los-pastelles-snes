@@ -403,6 +403,15 @@ function controleSFC() {
   return I;
 }
 
+// tecla escolhida no teclado do password: fundo amarelo com borda escura, brilho
+// em cima e sombra laranja embaixo (sprite 16x16, paleta 0; a letra, BG3, fica por cima)
+function teclaSenha() {
+  const I = new Img(16, 16);
+  roundRect(I, 0, 0, 16, 16, 3, 1);
+  roundRect(I, 1, 1, 14, 14, 2, (x, y) => (y <= 2 ? 14 : y >= 12 ? 6 : 5));
+  return I;
+}
+
 // pilula dos botoes de acao (rodape das caixas): sprites 16x16 na paleta 1
 // (creme F8F0C8 -> E8D098, brilho F8F8F8, borda C8A868, sombra 805030)
 function pilula() {
@@ -918,6 +927,6 @@ function buildSprites(emojis = {}) {
 
 module.exports = {
   shopScene, shopPal, titleScene, menuScene, menuChecker, tutBalloon, PAL_TUT, TUT_BOX,
-  ajudaBalloon, AJ_BOX, controleSFC, PAL_CTRL, CTRL_POS, buildSprites, sceneToBG, palBytes,
+  ajudaBalloon, AJ_BOX, controleSFC, PAL_CTRL, CTRL_POS, teclaSenha, buildSprites, sceneToBG, palBytes,
   PAL_SHOP, PAL_TITLE, PAL_MENU, SPAL,
 };
