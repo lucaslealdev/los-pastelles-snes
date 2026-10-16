@@ -1198,18 +1198,19 @@ HudSig:
     .word s_day, s_day+1, s_money, s_money+1, s_money+2, s_money+3, s_level, d_hour
     .word d_min, s_stock, s_stock+1, s_rep, d_perfect, d_happy, d_boss, d_goal, d_event
 HUD_SIG_N = 17
+; grupo de cada byte (um bit por numero do HUD): dia, dinheiro, nivel, hora, estoque,
+; reputacao, meta
+HudGrp:
+    .word 1, 1, 2, 2, 2, 2, 4, 8
+    .word 8, 16, 16, 32, 64, 64, 64, 64, 64
 
 HudValores:
     .a8
     .i16
     ; NumConv e PrintStr a cada quadro pesavam ~25% do quadro no fim do jogo (o tempo
-    ; que sobra e o do envio do audio): so reimprime quando um valor muda, e a cada
-    ; 32 quadros de qualquer jeito
-    lda hud_forca
-    bne @muda
-    lda frame
-    and #$1F
-    beq @muda
+    ; que sobra e o do envio do audio): cada numero so e reimpresso quando o valor
+    ; dele muda, e todos a cada 32 quadros
+    stz hud_muda
     ldx #0
 @cmp:
     A16
@@ -1218,26 +1219,35 @@ HudValores:
     A8
     lda a:0,y
     cmp hud_ant,x
-    bne @muda
-    inx
+    beq :+
+    sta hud_ant,x
+    lda f:HudGrp,x
+    tsb hud_muda
+:   inx
     inx
     cpx #(HUD_SIG_N*2)
     bne @cmp
-    rtl
-@muda:
+    lda hud_forca
+    bne @tudo
+    lda frame
+    and #$1F
+    bne :+
+@tudo:
     stz hud_forca
-    ldx #0
-:   A16
-    lda f:HudSig,x
-    tay
-    A8
-    lda a:0,y
-    sta hud_ant,x
-    inx
-    inx
-    cpx #(HUD_SIG_N*2)
-    bne :-
+    lda #$7F
+    sta hud_muda
+:   lda hud_muda
+    bne @dia
+    rtl
+@dia:
+    lda hud_muda
+    and #1
+    beq @din
     HUDNUM16 s_day, HUD_DIA_COL, HUD_LIN_TOPO, 4, HUD_DIA_W
+@din:
+    lda hud_muda
+    and #2
+    beq @niv
     A16
     lda s_money
     sta num
@@ -1250,7 +1260,15 @@ HudValores:
     sta txt_attr
     lda #HUD_RS_W
     jsr HudNum
+@niv:
+    lda hud_muda
+    and #4
+    beq @hora
     HUDNUM8 s_level, HUD_NV_COL, HUD_LIN_TOPO, 5, HUD_NV_W
+@hora:
+    lda hud_muda
+    and #8
+    beq @est
     ; hora: hh (com espaco) e mm (com zero)
     A16
     lda d_hour
@@ -1277,8 +1295,20 @@ HudValores:
     lda #FONT_0
     sta num_pad
     FAR0 PrintNum
+@est:
+    lda hud_muda
+    and #16
+    beq @rep
     HUDNUM16 s_stock, HUD_EST_COL, HUD_LIN_NUM, 4, HUD_EST_W
+@rep:
+    lda hud_muda
+    and #32
+    beq @meta
     HUDNUM8 s_rep, HUD_REP_COL, HUD_LIN_NUM, 4, HUD_REP_W
+@meta:
+    lda hud_muda
+    and #64
+    beq @r
     ; meta: perfeitos (desafio do sabor) ou satisfeitos, alinhado a direita do '/'
     FAR0 HasGoal
     bcc @r

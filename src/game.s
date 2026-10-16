@@ -1344,7 +1344,7 @@ MiniGame:
     bcs @ok
     SFX SFX_CURSOR
 @draw:
-    jmp MiniDraw
+    jmp MiniAviso
 @errou:
     lda tut_step            ; tutorial: so avisa e espera o botao certo
     cmp #$FF
@@ -1389,6 +1389,24 @@ MiniGame:
     ldx #TXT_M_ABRIU
     jsr ShowMsgBad
     SFX SFX_LIXO
+    rts
+
+; a cada quadro: so reimprime o aviso se a linha nao estiver mostrando ele (um aviso
+; de cliente pode ter escrito por cima). Reimprimir todo quadro pesava no tempo que
+; sobra para o envio do audio
+MiniAviso:
+    .a8
+    .i16
+    lda msg_timer
+    ora hud_mis
+    bne MiniDraw
+    ldx #TXT_M_FECHE
+    lda mg_mode
+    beq :+
+    ldx #TXT_M_CONSERTE
+:   lda a:0,x               ; 1a letra do aviso ja esta na linha?
+    cmp bg3_buf+(HUD_LIN_MSG*32+1)*2
+    bne MiniDraw
     rts
 
 ; aviso do minijogo na linha de avisos do rodape (os botoes sao sprites)

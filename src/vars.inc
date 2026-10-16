@@ -221,6 +221,7 @@ pw_digs:    .res 64     ; digitos lidos (SenhaLe)
 pw_ch:      .res 2      ; um caractere + fim (tecla do teclado)
 tit_lin:    .res 1
 hud_forca:  .res 1      ; HUD: reimprimir os numeros no proximo quadro
+hud_muda:   .res 1      ; HUD: bits dos numeros a reimprimir (HudGrp)
 hud_ant:    .res 34     ; HUD: os valores ja impressos (HudSig, um por palavra)      ; titulo: linha do 1o item (sobe com 4 itens)
 ; animacao grande no BG2 (banco28.s, AnimMostra...): 0 = nao, 1 = na tela, 2 = sumindo
 anim_vis:   .res 1
