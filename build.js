@@ -60,23 +60,26 @@ try {
   console.warn('Python indisponivel: reutilizando os elementos do cenario ja gerados em gen/.');
 }
 
+// prioridade alta no BG1 da loja: balcao (linhas 13-15, clientes atras) e o painel
+// da HUD embaixo (linhas 25+: fundador e mascote, com prioridade 2, ficam atras)
+const PRIO_LOJA = (tx, ty) => (ty >= 13 && ty <= 15) || ty >= 25;
 const scenes = {
   logo: [logoImg, logoPal, null],
-  shop0_0: [A.shopScene(0, 0), A.shopPal(0), (tx, ty) => ty >= 13 && ty <= 15],
-  shop0_1: [A.shopScene(0, 1), A.shopPal(0), (tx, ty) => ty >= 13 && ty <= 15],
-  shop0_2: [A.shopScene(0, 2), A.shopPal(0), (tx, ty) => ty >= 13 && ty <= 15],
-  shop1_0: [A.shopScene(1, 0), A.shopPal(1), (tx, ty) => ty >= 13 && ty <= 15],
-  shop1_1: [A.shopScene(1, 1), A.shopPal(1), (tx, ty) => ty >= 13 && ty <= 15],
-  shop1_2: [A.shopScene(1, 2), A.shopPal(1), (tx, ty) => ty >= 13 && ty <= 15],
-  shop2_0: [A.shopScene(2, 0), A.shopPal(2), (tx, ty) => ty >= 13 && ty <= 15],
-  shop2_1: [A.shopScene(2, 1), A.shopPal(2), (tx, ty) => ty >= 13 && ty <= 15],
-  shop2_2: [A.shopScene(2, 2), A.shopPal(2), (tx, ty) => ty >= 13 && ty <= 15],
-  shop3_0: [A.shopScene(3, 0), A.shopPal(3), (tx, ty) => ty >= 13 && ty <= 15],
-  shop3_1: [A.shopScene(3, 1), A.shopPal(3), (tx, ty) => ty >= 13 && ty <= 15],
-  shop3_2: [A.shopScene(3, 2), A.shopPal(3), (tx, ty) => ty >= 13 && ty <= 15],
-  shop4_0: [A.shopScene(4, 0), A.shopPal(4), (tx, ty) => ty >= 13 && ty <= 15],
-  shop4_1: [A.shopScene(4, 1), A.shopPal(4), (tx, ty) => ty >= 13 && ty <= 15],
-  shop4_2: [A.shopScene(4, 2), A.shopPal(4), (tx, ty) => ty >= 13 && ty <= 15],
+  shop0_0: [A.shopScene(0, 0), A.shopPal(0), PRIO_LOJA],
+  shop0_1: [A.shopScene(0, 1), A.shopPal(0), PRIO_LOJA],
+  shop0_2: [A.shopScene(0, 2), A.shopPal(0), PRIO_LOJA],
+  shop1_0: [A.shopScene(1, 0), A.shopPal(1), PRIO_LOJA],
+  shop1_1: [A.shopScene(1, 1), A.shopPal(1), PRIO_LOJA],
+  shop1_2: [A.shopScene(1, 2), A.shopPal(1), PRIO_LOJA],
+  shop2_0: [A.shopScene(2, 0), A.shopPal(2), PRIO_LOJA],
+  shop2_1: [A.shopScene(2, 1), A.shopPal(2), PRIO_LOJA],
+  shop2_2: [A.shopScene(2, 2), A.shopPal(2), PRIO_LOJA],
+  shop3_0: [A.shopScene(3, 0), A.shopPal(3), PRIO_LOJA],
+  shop3_1: [A.shopScene(3, 1), A.shopPal(3), PRIO_LOJA],
+  shop3_2: [A.shopScene(3, 2), A.shopPal(3), PRIO_LOJA],
+  shop4_0: [A.shopScene(4, 0), A.shopPal(4), PRIO_LOJA],
+  shop4_1: [A.shopScene(4, 1), A.shopPal(4), PRIO_LOJA],
+  shop4_2: [A.shopScene(4, 2), A.shopPal(4), PRIO_LOJA],
   title: [A.titleScene(), A.PAL_TITLE, null],
   menu: [A.menuScene(), A.PAL_MENU, null],
 };

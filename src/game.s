@@ -2874,7 +2874,7 @@ DayDraw:
     clc
     adc #168
     sta spr_y
-    lda #$32
+    lda #$22                ; prioridade 2: atras do painel da HUD (linhas 25+ do BG1)
     sta spr_attr
     jsr AddSprite32
 @nomasc:
@@ -2900,7 +2900,7 @@ DayDraw:
     lda #160
     sta spr_y
 :
-    lda #$34
+    lda #$24                ; prioridade 2: atras do painel da HUD (linhas 25+ do BG1)
     sta spr_attr
     jsr AddSprite32
     jsr DrawCoin
