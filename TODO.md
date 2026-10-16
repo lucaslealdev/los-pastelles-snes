@@ -26,6 +26,12 @@ Lista de trabalho pendente. Antes de cada item, reler as regras do `CLAUDE.md` (
   - Causa (`DrawChart` em `src/banco28.s`): o passo da escala (valor de cada bloco = maior lucro / 8) fica em `tmp2`, mas o rótulo do dia embaixo de cada barra é impresso com `PrintNum` → `PrintStr`, que usa `tmp2` como variável de trabalho (`sta tmp2` em `PrintStrB`, `src/main.s`). Depois do primeiro rótulo, o passo vira ~1400 e as barras seguintes ficam com altura 0.
   - Feito: o passo é salvo na pilha em volta do `PrintNum` do rótulo. De quebra, o número do dia ficou embaixo da barra (antes ficava à direita). `teste/resultado_cheio.lua` força 7 dias de histórico com lucros e prejuízos.
 
+- [ ] **Não falar em "bateria" nem em "SRAM" para o jogador.** Cartuchos feitos sem a função de salvar não têm como receber bateria; dizer "sem bateria" dá a entender que dá para colocar uma bateria nova, e não dá. Sem SRAM, o jogo simplesmente não oferece salvar/carregar (sem CONTINUAR, sem escolha de espaço) e usa só o password, sem apresentar isso como um problema do cartucho.
+  - Textos do jogo (`gerador/textos.js`): `SD_20` ("...CONTINUAR SEM BATERIA."), `SD_19N` ("SEM BATERIA: ANOTE O PASSWORD...") e qualquer outro que fale do cartucho. Sugestões: `SD_20` → "MOSTRA O PASSWORD DESTE\nJOGO PARA CONTINUAR\nDE ONDE PAROU."; `SD_19N` → "COMEÇA O PRÓXIMO DIA.\nANOTE O PASSWORD\nANTES DE SAIR.". Conferir a ajuda da pausa (`gerador/ajuda.js`) e as cartas.
+  - `LEIAME.md` (linha do Password: "para continuar sem bateria"): descrever o password como forma de continuar de onde parou, sem citar bateria. As notas técnicas de gravação do cartucho (placa com SRAM e bateria) podem ficar.
+  - Comentários do código e `CLAUDE.md` podem continuar dizendo "sem SRAM" (o jogador não vê).
+  - Conferir com `grep -rni "bateria\|sram" gerador/ LEIAME.md` no fim.
+
 ## Melhorias
 
 Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer na ordem).
