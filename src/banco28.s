@@ -1639,10 +1639,18 @@ MgaAcerto:
 MgaErro:
     .a8
     .i16
-    lda mg_mode
+    lda mg_mode             ; conserto do cesto: sem pastel, sem animacao
     bne :+
-    jsl AnimEsconde
+    ; o pastel abriu: cai na lixeira (do primeiro ao ultimo quadro) e o cartao
+    ; some depois de LIX_FIM quadros parado na tampa fechada
+    lda #ANIM_LIXEIRA
+    jsl AnimMostra
+    lda #(ANIM_LIXEIRA+ANIM_LIXEIRA_N-1)
+    jsl AnimVai
+    lda #LIX_FIM
+    jsl AnimSome
 :   rtl
+LIX_FIM = 30
 
 ; recheio: o emoji do sabor (mg_flav) em cima do monte, nos quadros marcados em
 ; AnimMontagemExtra (chamada pelo AnimSprites, depois de por os outros atras)

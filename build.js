@@ -154,7 +154,7 @@ let AJ_TILE;
 
 // animacoes grandes do expediente (BG2, paleta 5): gerador/anim_<nome>.py faz os
 // quadros (Python so quando mudam), gerador/anim.js os tiles. Tiles logo antes da ajuda.
-const ANIMS = ['montagem'];
+const ANIMS = ['montagem', 'lixeira'];
 let ANIM;
 {
   for (const n of ANIMS) {

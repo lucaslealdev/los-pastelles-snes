@@ -1,6 +1,6 @@
 -- animacao grande da montagem do pastel (melhoria 10): fotos de cada quadro-chave
--- num minijogo jogado pelo robo, depois um minijogo com botao errado (o cartao tem
--- que sumir). Confere que o envio dos tiles (AnimDma) termina dentro do vblank.
+-- num minijogo jogado pelo robo, depois um minijogo com botao errado (o cartao
+-- passa para a animacao da lixeira e some no fim; detalhes em teste/lixeira.lua). Confere que o envio dos tiles (AnimDma) termina dentro do vblank.
 -- Sai com 0 se tudo deu certo.
 local dir = (debug and debug.getinfo and (debug.getinfo(1, "S").source or ""):match("^@(.*[/\\])")) or "teste/"
 dofile(dir .. "bot.lua")
@@ -44,7 +44,7 @@ emu.addEventCallback(function()
   if apertar then emu.setInput({ [apertar] = true }, 0) end
 end, emu.eventType.inputPolled)
 
-local fase, t, vistas, nvistas, espera, ultimo, sumiu, agenda = 0, 0, {}, 0, 0, -1, false, nil
+local fase, t, vistas, nvistas, espera, ultimo, sumiu, agenda, lixo = 0, 0, {}, 0, 0, -1, false, nil, false
 emu.addEventCallback(function()
   t = t + 1
   local jogo = r8("state") == 4 and r8("tut_step") == 255 and r8("tut_box") == 0
@@ -77,11 +77,15 @@ emu.addEventCallback(function()
     if espera > 0 then
       espera = espera + 1
       if espera == 6 then apertar = nil end
-      if espera <= 15 and r8("anim_vis") == 0 then sumiu = true end
+      local rel = r8("anim_cur") - C.ANIM_LIXEIRA
+      if espera <= 15 and r8("anim_vis") == 1 and rel >= 0 and rel < C.ANIM_LIXEIRA_N then lixo = true end
+      -- some no fim (ou da lugar a montagem, se o robo ja comecou outro pastel)
+      if lixo and (r8("anim_vis") == 0 or rel < 0 or rel >= C.ANIM_LIXEIRA_N) then sumiu = true end
       if espera == 3 then foto("erro") end
-      if espera == 20 then
-        if r8("mg_on") ~= 0 then erro("o botao errado nao encerrou o minijogo") end
-        if not sumiu then erro("o cartao nao sumiu depois do erro") end
+      if espera == 20 and r8("mg_on") ~= 0 then erro("o botao errado nao encerrou o minijogo") end
+      if espera == 200 then
+        if not lixo then erro("o erro nao mostrou a lixeira") end
+        if not sumiu then erro("o cartao nao sumiu depois da lixeira") end
         foto("depois")
         fase = 2
       end
