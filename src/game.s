@@ -1303,6 +1303,7 @@ MiniStart:
     A8
     lda #1
     sta mg_on
+    jsl MgaInicio           ; animacao grande da montagem (banco28.s)
     SFX SFX_CURSOR
     jmp MiniDraw
 
@@ -1336,6 +1337,7 @@ MiniGame:
     A8
     beq @errou
     inc mg_pos
+    jsl MgaAcerto
     lda mg_pos
     cmp mg_len
     bcs @ok
@@ -1366,6 +1368,7 @@ MiniGame:
     jmp PutInFryer
 @fail:
     stz mg_on
+    jsl MgaErro             ; desfecho de erro da animacao (melhoria 11: lixeira)
     lda mg_mode
     beq :+
     ldx #TXT_M_NAODEU
@@ -2906,6 +2909,7 @@ DayDraw:
     jsr DrawBins
     jsr DrawBubbles
     jsr DrawBaskets
+    jsl AnimSprites         ; animacao grande: anda e poe os sprites atras do cartao
     rts
 
 DigTiles: .word SPR_DIG_0, SPR_DIG_1, SPR_DIG_2, SPR_DIG_3, SPR_DIG_4, SPR_DIG_5, SPR_DIG_6, SPR_DIG_7, SPR_DIG_8, SPR_DIG_9

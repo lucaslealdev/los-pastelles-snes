@@ -152,6 +152,28 @@ let AJ_TILE;
   console.log(`ajuda: ${tiles.length} tiles (${AJ_TILE}+; maior cenario da loja: ${maxLoja})`);
 }
 
+// animacoes grandes do expediente (BG2, paleta 5): gerador/anim_<nome>.py faz os
+// quadros (Python so quando mudam), gerador/anim.js os tiles. Tiles logo antes da ajuda.
+const ANIMS = ['montagem'];
+let ANIM;
+{
+  for (const n of ANIMS) {
+    try {
+      execFileSync(PY, [path.join('gerador', `anim_${n}.py`)], { cwd: ROOT, stdio: 'inherit' });
+    } catch (e) {
+      if (!fs.existsSync(path.join(GEN, `anim_${n}.json`))) throw e;
+      console.log(`anim_${n}.py falhou; usando gen/anim_${n}.json existente`);
+    }
+  }
+  ANIM = require('./gerador/anim').gerarAnims(
+    ANIMS.map((nome) => ({ nome, dados: JSON.parse(fs.readFileSync(path.join(GEN, `anim_${nome}.json`), 'utf8')) })), AJ_TILE);
+  if (maxLoja > ANIM.base) throw new Error(`cenario da loja com ${maxLoja} tiles invade os tiles das animacoes (${ANIM.base}+)`);
+  w('anim_borda.bin', ANIM.borda); w('anim_map.bin', ANIM.map); w('anim_pal.bin', palBytes([null, ...ANIM.pal]));
+  for (const [k, v] of Object.entries(ANIM.bins)) w(k, v);
+  w('anim.inc', ANIM.inc);
+  console.log(`animacoes: ${ANIM.n} quadros, tiles ${ANIM.base}+`);
+}
+
 // ------------------------------------------------------------ sprites
 // sabores e icones como emojis (gerador/emoji_sprites.py; Python so quando mudam)
 fs.writeFileSync(path.join(GEN, 'spal.json'), JSON.stringify(A.SPAL));
@@ -290,6 +312,7 @@ inc.push(`SP_VER_COL = ${(32 - [...VERSAO_TXT].length) >> 1}`);
   const xs = Object.values(H.TOPO).map(H.pilulaX).sort((a, b) => a[0] - b[0]);
   xs.forEach(([x0, x1], i) => { if (x0 < 0 || x1 > 255 || (i && x0 <= xs[i - 1][1] + 1)) throw new Error('HUD: pilulas do topo se sobrepoem ou saem da tela'); });
 }
+for (const [k, v] of Object.entries(ANIM.consts)) inc.push(`${k} = ${v}`);
 inc.push(`AJ_VRAM = ${hex4(AJ_TILE * 16)}`, `AJ_MAPA_VRAM = ${hex4(AJ_MAPA)}`, `AJ_MAPB_VRAM = ${hex4(AJ_MAPB)}`,
   `AJ_SC_A = ${hex2(AJ_MAPA >> 8)}`, `AJ_SC_B = ${hex2(AJ_MAPB >> 8)}`);
 // niveis (gerador/niveis.js): o codigo usa NV_*; cartas de desbloqueio agrupadas no mesmo nivel

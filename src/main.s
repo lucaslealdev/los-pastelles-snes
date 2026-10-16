@@ -297,6 +297,12 @@ NmiFast:
     stx $4305
     lda #$01
     sta MDMAEN
+    ; quadro novo da animacao grande (banco28.s): vai no lugar do BG3 neste quadro
+    lda anim_sujo
+    beq @bg3
+    jsl AnimDma
+    bra @nobg3
+@bg3:
     ; mapa BG3
     lda bg3_dirty
     beq @nobg3
@@ -363,6 +369,9 @@ NmiFast:
     bra @dimd
 @nodim:
     jsr UiNmi
+    lda anim_vis            ; animacao grande do expediente (BG2)
+    beq @dimd
+    jsl AnimNmi
 @dimd:
     lda bright
     sta INIDISP

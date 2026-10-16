@@ -1365,3 +1365,323 @@ HudSprites:
 @r: rtl
 HudIcoX:    .word HUD_DIA_ICOX, HUD_RS_ICOX, HUD_NV_ICOX, HUD_HORA_ICOX
 HudIcoTile: .word SPR_CALENDARIO, SPR_MOEDA, SPR_ESTRELA, SPR_RELOGIO
+
+; ---------------------------------------------------------------- animacoes grandes (BG2)
+; Player generico das animacoes grandes do expediente (gerador/anim.js): um cartao
+; creme no BG2 (mapa ANIM_MAPA_VRAM, paleta 5, prioridade alta) cujo miolo (8x6
+; tiles) recebe o quadro atual pela NMI (AnimDma) so quando ele muda. Uso:
+;   lda #quadro : jsl AnimMostra   mostra o cartao ja nesse quadro (indice global)
+;   lda #quadro : jsl AnimVai      anda ate esse quadro (para frente ou para tras)
+;   lda #n      : jsl AnimSome     some n quadros de video depois de chegar ao alvo
+;   jsl AnimEsconde                some ja
+; Os quadros de uma animacao vao de ANIM_<NOME> a ANIM_<NOME>+ANIM_<NOME>_N-1;
+; Anim<Nome>Chaves tem os quadros-chave (relativos). AnimSprites (fim do DayDraw)
+; anda a animacao e poe atras do cartao os sprites que encostam nele.
+ANIM_VEL = 3                ; quadros de video por quadro de animacao
+
+; com o cenario do expediente (tela desligada): borda do cartao, mapa e paleta 5
+AnimCarrega:
+    .a8
+    .i16
+    stz anim_vis
+    stz anim_sujo
+    ldx #ANIM_VRAM
+    stx VMADDL
+    ldx #.loword(AnimBorda)
+    stx dma_src
+    lda #^AnimBorda
+    sta dma_src+2
+    ldx #ANIM_BORDA_BYTES
+    stx dma_len
+    FAR0 DmaVram
+    ldx #ANIM_MAPA_VRAM
+    stx VMADDL
+    ldx #.loword(AnimMapa)
+    stx dma_src
+    lda #^AnimMapa
+    sta dma_src+2
+    ldx #2048
+    stx dma_len
+    FAR0 DmaVram
+    ldx #.loword(AnimPal)
+    stx dma_src
+    lda #^AnimPal
+    sta dma_src+2
+    ldx #(80*2)
+    ldy #32
+    FAR0 CopyPal
+    rtl
+
+AnimMostra:
+    .a8
+    .i16
+    sta anim_cur
+    sta anim_tgt
+    lda #1
+    sta anim_vis
+    sta anim_sujo
+    stz anim_ok
+    stz anim_fim
+    lda #ANIM_VEL
+    sta anim_t
+    rtl
+
+AnimVai:
+    .a8
+    .i16
+    sta anim_tgt
+    rtl
+
+AnimSome:
+    .a8
+    .i16
+    sta anim_fim
+    rtl
+
+AnimEsconde:
+    .a8
+    .i16
+    lda anim_vis
+    beq :+
+    lda #2
+    sta anim_vis
+:   rtl
+
+; um quadro do expediente (chamada no fim do DayDraw): anda a animacao, poe atras
+; do cartao (prioridade 2; o BG2 de prioridade alta fica na frente) os sprites que
+; encostam nele e desenha os extras da animacao (o recheio da montagem)
+AnimSprites:
+    .a8
+    .i16
+    lda anim_vis
+    cmp #1
+    beq :+
+    rtl
+:   lda dim_on              ; pausa/tutorial aberto: a animacao espera
+    bne @spr
+    lda anim_sujo           ; espera a NMI mandar o quadro anterior
+    bne @spr
+    lda anim_cur
+    cmp anim_tgt
+    beq @parado
+    dec anim_t
+    bne @spr
+    lda #ANIM_VEL
+    sta anim_t
+    lda anim_cur
+    cmp anim_tgt
+    bcc :+
+    dec a
+    dec a
+:   inc a
+    sta anim_cur
+    lda #1
+    sta anim_sujo
+    bra @spr
+@parado:
+    lda anim_fim
+    beq @spr
+    dec anim_fim
+    bne @spr
+    lda #2
+    sta anim_vis
+    rtl
+@spr:
+    lda anim_ok
+    bne :+
+    rtl
+:   ldx #0
+@l: cpx oam_idx
+    bcs @extra
+    ; encosta no cartao? (supondo 16x16: linhas y..y+15, colunas x..x+15)
+    lda oam_buf+1,x
+    cmp #(ANIM_Y0-15)
+    bcc @nx
+    cmp #(ANIM_Y1+1)
+    bcs @nx
+    lda oam_buf,x
+    cmp #(ANIM_X0-15)
+    bcc @nx
+    cmp #(ANIM_X1+1)
+    bcs @nx
+    lda oam_buf+3,x
+    and #$CF
+    ora #$20
+    sta oam_buf+3,x
+@nx:
+    inx
+    inx
+    inx
+    inx
+    bra @l
+@extra:
+    jmp MgaSprites
+
+; NMI, no envio (nmi_ready): tiles do quadro atual para o miolo do cartao
+AnimDma:
+    .a8
+    .i16
+    lda #$80
+    sta VMAIN
+    ldx #ANIM_SLOT_VRAM
+    stx VMADDL
+    lda #$01
+    sta $4300
+    lda #$18
+    sta $4301
+    A16
+    lda anim_cur            ; x = quadro * 3 (na NMI nada de tmp: usa a pilha)
+    and #$00FF
+    pha
+    asl a
+    clc
+    adc 1,s
+    tax
+    pla
+    lda f:AnimQuadro,x
+    sta $4302
+    A8
+    lda f:AnimQuadro+2,x
+    sta $4304
+    ldx #ANIM_BYTES
+    stx $4305
+    lda #$01
+    sta MDMAEN
+    stz anim_sujo
+    lda #1
+    sta anim_ok
+    rtl
+
+; NMI sem pausa/tutorial (depois da UiNmi): liga o BG2 com o cartao. Fora do
+; expediente, ou sumindo, volta o BG2SC do xadrez dos menus
+AnimNmi:
+    .a8
+    .i16
+    lda state
+    cmp #ST_DAY
+    bne @off
+    lda anim_vis
+    cmp #1
+    bne @off
+    lda anim_ok
+    beq @r
+    lda #$17                ; BG1 + BG2 + BG3 + sprites
+    sta TM
+    lda #(ANIM_MAPA_VRAM >> 8)
+    sta BG2SC
+    stz BG2HOFS
+    stz BG2HOFS
+    lda #$FF
+    sta BG2VOFS
+    lda #$03
+    sta BG2VOFS
+@r: rtl
+@off:
+    stz anim_vis
+    lda #(VRAM_BG2MAP >> 8)
+    sta BG2SC
+    rtl
+
+; ---------------------------------------------------------------- montagem do pastel (minijogo)
+; Quadros-chave: 0 massa, 1 recheio, 2 dobra, 3 fechando com o garfo, 4 pronto.
+; Cada acerto anda ate a chave proporcional ao progresso (mg_pos / mg_len).
+MGA_CHAVES = 5
+
+; minijogo de fechar o pastel comecou (o conserto do cesto nao tem animacao)
+MgaInicio:
+    .a8
+    .i16
+    lda mg_mode
+    bne :+
+    lda #ANIM_MONTAGEM
+    jsl AnimMostra
+:   rtl
+
+; acertou um botao: chave = arredonda(mg_pos * 4 / mg_len); na ultima, some depois
+MgaAcerto:
+    .a8
+    .i16
+    lda mg_mode
+    bne @r
+    lda mg_pos              ; (mg_pos * 8 + mg_len) / (mg_len * 2)
+    asl a
+    asl a
+    asl a
+    clc
+    adc mg_len
+    sta tmp
+    lda mg_len
+    asl a
+    sta tmp+1
+    ldx #0
+:   lda tmp
+    cmp tmp+1
+    bcc :+
+    sbc tmp+1
+    sta tmp
+    inx
+    bra :-
+:   cpx #MGA_CHAVES
+    bcc :+
+    ldx #(MGA_CHAVES-1)
+:   lda f:AnimMontagemChaves,x
+    clc
+    adc #ANIM_MONTAGEM
+    jsl AnimVai
+    cpx #(MGA_CHAVES-1)
+    bne @r
+    lda #40                 ; pastel pronto aparece um pouco e o cartao some
+    jsl AnimSome
+@r: rtl
+
+; errou ou acabou o tempo: desfecho de erro. Por enquanto so some; a melhoria 11
+; (pastel indo para a lixeira) toca aqui a sua animacao a partir de anim_cur
+MgaErro:
+    .a8
+    .i16
+    lda mg_mode
+    bne :+
+    jsl AnimEsconde
+:   rtl
+
+; recheio: o emoji do sabor (mg_flav) em cima do monte, nos quadros marcados em
+; AnimMontagemExtra (chamada pelo AnimSprites, depois de por os outros atras)
+MgaSprites:
+    .a8
+    .i16
+    lda anim_cur
+    sec
+    sbc #ANIM_MONTAGEM
+    cmp #ANIM_MONTAGEM_N
+    bcs @r
+    A16
+    and #$00FF
+    tax
+    A8
+    lda f:AnimMontagemExtra,x
+    beq @r
+    A16
+    lda mg_flav
+    and #$00FF
+    asl a
+    tax
+    lda IconTiles,x
+    sta spr_tile
+    lda #(ANIM_MONTAGEM_PX-8)
+    sta spr_x
+    A8
+    lda #(ANIM_MONTAGEM_PY-8)
+    sta spr_y
+    lda #$30
+    sta spr_attr
+    lda #1
+    sta spr_size
+    FAR0 AddSprite
+    stz spr_size
+@r: rtl
+
+.segment "BANK28"
+AnimBorda: .incbin "gen/anim_borda.bin"
+AnimMapa:  .incbin "gen/anim_map.bin"
+AnimPal:   .incbin "gen/anim_pal.bin"
+.include "gen/anim.inc"

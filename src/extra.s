@@ -571,6 +571,7 @@ LoadShopScene:
     VRAM_LOAD TutMap, VRAM_BG2MAP, 2048
     PAL_LOAD TutPal, 48, 32
     jsl AjudaCarrega        ; balao grande e controle da ajuda (pausa)
+    jsl AnimCarrega         ; cartao das animacoes grandes (montagem do pastel)
     rts
 
 .macro UNIT_SCENE n, r

@@ -187,6 +187,14 @@ card_next:  .res 1
 menu_sel:   .res 1
 shop_aba:   .res 1      ; loja: aba escolhida
 shop_pos:   .res 1      ; loja: posicao do cursor na aba
+; animacao grande no BG2 (banco28.s, AnimMostra...): 0 = nao, 1 = na tela, 2 = sumindo
+anim_vis:   .res 1
+anim_ok:    .res 1      ; 1 = o quadro atual ja foi para a VRAM (pode mostrar)
+anim_cur:   .res 1      ; quadro atual (indice em AnimQuadro)
+anim_tgt:   .res 1      ; quadro alvo (anda 1 quadro a cada ANIM_VEL quadros de video)
+anim_t:     .res 1
+anim_sujo:  .res 1      ; 1 = a NMI precisa mandar os tiles de anim_cur
+anim_fim:   .res 1      ; quadros parado no alvo antes de sumir (0 = fica)
 loop_i:     .res 2
 loop_j:     .res 1
 lock_lv:    .res 2
