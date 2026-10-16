@@ -172,11 +172,14 @@ function shopScene(v = 0, ref = 0) {
   I.rect(4, 175, 4, 9, G); I.rect(122, 175, 4, 9, G);
   for (let i = 0; i < 6; i++) {
     const x0 = 4 + i * 20;
-    // tigela
-    I.ell(x0 + 1, 152, x0 + 18, 167, W, (x, y) => y >= 158);
-    I.rect(x0 + 1, 157, 18, 2, L);
-    I.ell(x0 + 1, 152, x0 + 18, 167, G, (x, y) => y >= 164);
-    I.outline(K, (x, y) => x >= x0 && x <= x0 + 19 && y >= 150 && y <= 168);
+    // tigela: desenhada a parte para o contorno (outline so pinta pixels vazios, e
+    // aqui a parede ja preencheu tudo; sem ele a tigela branca sumia nos azulejos)
+    const tg = new Img(20, 19);
+    tg.ell(1, 2, 18, 17, W, (x, y) => y >= 8);
+    tg.rect(1, 7, 18, 2, L);
+    tg.ell(1, 2, 18, 17, G, (x, y) => y >= 14);
+    tg.outline(K);
+    for (let y = 0; y < 19; y++) for (let x = 0; x < 20; x++) if (tg.get(x, y)) I.set(x0 + x, 150 + y, tg.get(x, y));
   }
   // fritadeira
   const fx = 134, fy = 134;
@@ -550,7 +553,9 @@ const PORT_SPECS = [
 function founderBack(frame) {
   const K = 1, W = 2, g = 3, s = 4, S = 5, h = 6, H = 7, c = 8, C = 9, b = 10, B = 11, o = 12;
   const I = new Img(32, 32);
-  const bob = frame ? 1 : 0;
+  // (1 px abaixo do topo do sprite: o contorno do chapeu precisa da linha de cima;
+  // o jogo desenha o fundador 1 px mais alto para compensar)
+  const bob = frame ? 2 : 1;
   // corpo
   I.ell(6, 17 + bob, 25, 40, c);
   // bracos

@@ -2911,12 +2911,12 @@ DayDraw:
     lda #SPR_FOUNDER_1
     sta spr_tile
     A8
-:   lda #164                ; os pes ficam na borda de cima do painel da HUD (y 196)
-    sta spr_y
+:   lda #163                ; os pes ficam na borda de cima do painel da HUD (y 196)
+    sta spr_y               ; (o desenho comeca 1 px abaixo do topo do sprite)
     lda masc_t
     and #$04
     beq :+
-    lda #160
+    lda #159
     sta spr_y
 :
     lda #$24                ; prioridade 2: atras do painel da HUD (linhas 25+ do BG1)
