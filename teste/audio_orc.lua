@@ -76,6 +76,12 @@ local function quadro()
     f:write(string.format("quadros do dia medidos: %d (sem chegar ao WaitFrame antes do vblank: %d)\n", #Q, atras))
     f:write(string.format("linhas ociosas antes do vblank: min %d  p5 %d  p10 %d  media %.1f  p50 %d\n",
       lin[1] or -1, p(0.05), p(0.10), soma / math.max(1, #lin), p(0.5)))
+    local mg = {}
+    for _, q in ipairs(Q) do if q[7] and q[1] >= 0 and q[1] < 225 then mg[#mg + 1] = 225 - q[1] end end
+    table.sort(mg)
+    if #mg > 0 then
+      f:write(string.format("so no minijogo (%d quadros): linhas ociosas p10 %d  p50 %d\n", #mg, mg[math.max(1, #mg // 10)], mg[#mg // 2 + 1]))
+    end
     f:write(string.format("bytes/quadro: fala %.1f  musica %.1f\n", tot_f / #Q, tot_m / #Q))
     -- vazao: nos quadros em que fala e musica mandaram bastante, bytes por linha ociosa
     local melhor = 0

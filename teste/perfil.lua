@@ -30,6 +30,7 @@ local function w(n, v, tam) for i = 0, (tam or 1) - 1 do emu.write(0x7E0000 + L[
 
 local INI, DUR = PERFIL_INI or 900, PERFIL_DUR or 120   -- quadros do dia
 local adiantado, nq, conta, total, ids = false, 0, {}, 0, {}
+mg_agora = false                -- PERFIL_MG: so os quadros com o minijogo aberto
 local chama, nchama = {}, 0
 local function ligarChamadas()
   local pc = L["AddSprite"] & 0xFFFF
@@ -48,6 +49,7 @@ local function ligar()
   if PERFIL_CHAMADAS then return ligarChamadas() end
   for _, b in ipairs({ 0x00, 0x80, 0x9C }) do       -- banco 0 (e espelho) e banco 28
     local id = emu.addMemoryCallback(function(a)
+      if PERFIL_MG and not mg_agora then return end
       local s = emu.getState()
       local pc = (s["cpu.k"] << 16) | s["cpu.pc"]
       conta[pc] = (conta[pc] or 0) + 1
@@ -68,7 +70,8 @@ emu.addEventCallback(function()
     w("s_attend", 1); w("s_pc", 1); w("s_moto", 1); w("s_ads", 1); w("s_stores", 2)
     w("s_stock", 400, 2); w("s_money", 50000, 4); w("s_rep", 90)
   end
-  if st == 4 and adiantado then
+  mg_agora = r8("mg_on") ~= 0
+  if st == 4 and adiantado and (not PERFIL_MG or mg_agora) then
     nq = nq + 1
     if nq == INI then ligar() end
     if nq == INI + DUR then
