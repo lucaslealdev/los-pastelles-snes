@@ -82,6 +82,7 @@ end
 
 emu.addEventCallback(function()
   f = f + 1
+  if BOT_DESLIGADO then return end          -- o script de teste assumiu o controle
   local st = r8("state")
   if st ~= laststate then
     log:write(string.format("f=%d state=%d dia=%d caixa=%d nivel=%d xp=%d rep=%d estoque=%d missao=%d boss=%d fry=%d cnt=%d\n",
