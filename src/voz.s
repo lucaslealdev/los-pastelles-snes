@@ -26,6 +26,12 @@ MUS_CRITICO = 1125          ; musica com menos que isso no anel (0,2 s a 10 kHz)
     lda [ptr],y
     sta lt_b2
     iny
+    lda apu_cnt             ; o valor da porta 0 sai pronto antes da espera: entre o eco
+    inc a                   ; e o trio seguinte o CPU so copia (esse intervalo e o que
+    and #$3F                ; limita o envio)
+    sta apu_cnt
+    ora #modo
+    sta lt_p0
     lda apu_ult
 :   cmp APUIO0
     bne :-
@@ -35,13 +41,9 @@ MUS_CRITICO = 1125          ; musica com menos que isso no anel (0,2 s a 10 kHz)
     sta APUIO2
     lda lt_b2
     sta APUIO3
-    lda apu_cnt
-    inc a
-    and #$3F
-    sta apu_cnt
-    ora #modo
-    sta apu_ult
+    lda lt_p0
     sta APUIO0
+    sta apu_ult
     dex
     dex
     dex

@@ -127,6 +127,7 @@ mu_ptr:     .res 3      ; musica gravada: ponteiro longo na ROM
 lt_b0:      .res 1      ; lote do stream (src/voz.s)
 lt_b1:      .res 1
 lt_b2:      .res 1
+lt_p0:      .res 1      ; LOTE: valor da porta 0 do proximo trio
 lt_n:       .res 2
 lt_ant:     .res 2
 
