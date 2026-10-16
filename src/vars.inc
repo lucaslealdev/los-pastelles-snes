@@ -190,25 +190,34 @@ shop_pos:   .res 1      ; loja: posicao do cursor na aba
 ; password (banco 28, gerador/senha.js)
 tem_sram:   .res 1      ; 1 = o cartucho tem SRAM (SramDetecta no boot)
 senha_modo: .res 1      ; tela do password: 0 digitar, 1 mostrar (volta a loja), 2 mostrar e sair
-pw_buf:     .res 20     ; os 160 bits
+pw_buf:     .res 13     ; os bits do password (SENHA_N * 5)
 pw_sym:     .res 32     ; simbolos 0..31 (indices de SenhaAlfa)
 pw_pos:     .res 2      ; posicao do bit em pw_buf
-pw_v:       .res 4      ; valor de um campo
-pw_min:     .res 4
-pw_n:       .res 1      ; bits do campo
+pw_v:       .res 4      ; valor de um campo / bits lidos
+pw_n:       .res 1      ; quantos bits
 pw_cur:     .res 1      ; digitar: quantos simbolos ja foram digitados
 pw_tecla:   .res 1      ; digitar: tecla escolhida (0..31)
 pw_msg:     .res 1      ; 1 = password invalido
 pw_trof:    .res 1      ; s_trof bits 5..7
-pw_tflags:  .res 1      ; s_tflags bits 0..3
+pw_tflags:  .res 1      ; s_tflags bits 0..2
+pw_versao:  .res 1
 pw_lfsr:    .res 2
 pw_crc:     .res 2
-pw_ver:     .res 2      ; verificacao (11 bits)
-pw_str:     .res 48     ; texto para PrintStr (2 linhas de 4 blocos)
-pw_adr:     .res 2      ; endereco do campo
-pw_max:     .res 4
+pw_ver:     .res 2      ; verificacao
+pw_str:     .res 32     ; texto para PrintStr (2 linhas)
+pw_big:     .res 12     ; o numero em base mista (little endian)
+pw_t:       .res 12
+pw_rad:     .res 2      ; base do campo
+pw_r2:      .res 2
+pw_dig:     .res 2      ; digito do campo
+pw_rem:     .res 4
+pw_cnt:     .res 2
+pw_i:       .res 2      ; indice do bit no numero grande
+pw_tipo:    .res 1
 pw_tam:     .res 2      ; bytes do campo
-pw_pass:    .res 1      ; SenhaLe: 0 so confere, 1 grava
+pw_adr:     .res 2      ; endereco do campo
+pw_x:       .res 2      ; deslocamento do campo na tabela
+pw_digs:    .res 64     ; digitos lidos (SenhaLe)
 pw_ch:      .res 2      ; um caractere + fim (tecla do teclado)
 tit_lin:    .res 1      ; titulo: linha do 1o item (sobe com 4 itens)
 ; animacao grande no BG2 (banco28.s, AnimMostra...): 0 = nao, 1 = na tela, 2 = sumindo

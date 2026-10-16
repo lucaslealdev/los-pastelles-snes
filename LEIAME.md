@@ -32,7 +32,7 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 - Pedido duplo (nível 4+): balão com "2" = entregue dois pastéis.
 - Duelo semanal com o Concorrente (dias 7, 14, 21...): bata a meta de clientes satisfeitos e ganhe R$ 100.
 - 3 jogos salvos (NOVO JOGO / CONTINUAR abrem a escolha do espaço).
-- **Password** para continuar sem bateria: na loja, VER PASSWORD mostra um código de 32 caracteres (8 blocos de 4); na tela inicial, PASSWORD digita o código e volta ao mesmo ponto do jogo. Num cartucho sem SRAM o jogo percebe sozinho, não mostra CONTINUAR e, ao voltar ao menu, mostra o password antes de sair.
+- **Password** para continuar sem bateria: na loja, VER PASSWORD mostra um código de 20 caracteres (5 blocos de 4); na tela inicial, PASSWORD digita o código e volta ao mesmo ponto do jogo. Num cartucho sem SRAM o jogo percebe sozinho, não mostra CONTINUAR e, ao voltar ao menu, mostra o password antes de sair.
 - Tipos de cliente: criança (boné, tem pressa e paga meia), idoso (óculos, espera mais e dá gorjeta boa) e turista (chapéu de palha, pede o mais caro e paga R$ 3 a mais).
 - 16 troféus salvos no cartucho (loja: VER TROFÉUS).
 - Reforma do salão em 2 etapas (vitrine com pastéis no balcão; depois loja premium com bandeirinhas, flores e letreiro dourado) e novos itens: freezer, ar-condicionado, música ambiente e uniforme. A loja é dividida em abas (DIA, LOJA, EQUIPE, REDE): **L**/**R** (ou ◀/▶) trocam de aba.

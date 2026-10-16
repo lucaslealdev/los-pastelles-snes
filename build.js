@@ -385,7 +385,7 @@ w('cards.inc', cards.join('\n') + '\n');
 {
   const SE = require('./gerador/senha');
   w('senha.inc', SE.inc(F.CODE));
-  console.log(`password: ${SE.TOTAL / 5} simbolos (${SE.BITS_CAMPOS} bits de campos)`);
+  console.log(`password: ${SE.N_SIMB} simbolos (${SE.BITS_P} bits de jogo + ${SE.BITS_VER} de verificacao)`);
 }
 data.push('MissionTxt:\n' + Array.from({ length: 15 }, (_, i) => `  .word TXT_MIS_${i}`).join('\n'));
 data.push('ShopName:\n' + Array.from({ length: 21 }, (_, i) => `  .word TXT_S_${i}`).join('\n'));

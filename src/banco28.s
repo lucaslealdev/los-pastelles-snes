@@ -1695,12 +1695,12 @@ AnimPal:   .incbin "gen/anim_pal.bin"
 .include "gen/anim.inc"
 
 ; ---------------------------------------------------------------- password
-; Salvar sem SRAM (gerador/senha.js): 160 bits = 32 simbolos de 5 bits.
-; bits 0..2 versao, 3..148 campos (tabela SenhaCampos: cada campo com teto e
-; piso, so com os bits do seu intervalo), 149..159 verificacao (CRC-16 CCITT
-; dos 20 bytes com esses bits zerados, 11 bits) XOR chave. Os bits 0..148 sao
-; embaralhados por um LFSR semeado pela verificacao.
+; Salvar sem SRAM (gerador/senha.js): o save vira um numero em base mista (cada
+; campo e um digito com a base exata da sua faixa), P. Os bits do password sao P
+; (SENHA_BITS_P, embaralhados por um LFSR semeado pela verificacao) e depois a
+; verificacao (CRC-16 CCITT, SENHA_BITS_VER bits) XOR chave; 5 bits por simbolo.
 .include "gen/senha.inc"
+SENHA_BANCO_TAB = (^SenhaCampos) << 16  ; as tabelas de degraus estao neste banco
 
 SRAM_TESTE = $7007FE        ; 2 ultimos bytes da SRAM de 2 KB (sem uso nos saves)
 
@@ -1742,8 +1742,9 @@ SramDetecta:
     rtl
 
 PwMascTab: .byte $80, $40, $20, $10, $08, $04, $02, $01
+PwMascBig: .byte $01, $02, $04, $08, $10, $20, $40, $80
 
-; pw_pos -> Y = byte em pw_buf, A = mascara do bit
+; pw_pos -> Y = byte em pw_buf, A = mascara do bit (o bit 0 e o mais alto do byte 0)
 PwMasc:
     .a8
     .i16
@@ -1758,6 +1759,23 @@ PwMasc:
     tax
     A8
     lda f:PwMascTab,x
+    rts
+
+; pw_i -> Y = byte em pw_big, A = mascara do bit (pw_big e little endian)
+PwMascI:
+    .a8
+    .i16
+    A16
+    lda pw_i
+    lsr a
+    lsr a
+    lsr a
+    tay
+    lda pw_i
+    and #$0007
+    tax
+    A8
+    lda f:PwMascBig,x
     rts
 
 ; escreve os pw_n bits de baixo de pw_v (o mais alto primeiro) em pw_pos
@@ -1822,7 +1840,7 @@ PwTira:
 @fim:
     rts
 
-; CRC-16 CCITT dos 20 bytes de pw_buf -> pw_crc
+; CRC-16 CCITT de pw_buf -> pw_crc
 PwCrc:
     .a8
     .i16
@@ -1846,12 +1864,11 @@ PwCrc:
     dey
     bne @bit
     inx
-    cpx #20
+    cpx #SENHA_BYTES
     bne @b
     rts
 
-; XOR dos bits 0..148 com o LFSR semeado por pw_ver (a mesma rotina embaralha e
-; desembaralha)
+; XOR dos bits de P com o LFSR semeado por pw_ver (embaralha e desembaralha)
 PwEmbaralha:
     .a8
     .i16
@@ -1874,13 +1891,13 @@ PwEmbaralha:
     dey
     bne @s
     lda tmp
-    cpx #18
+    cpx #(SENHA_BYTES_P-1)
     bne :+
-    and #$F8                ; bits 149..151 sao da verificacao
+    and #SENHA_MASC_P       ; no ultimo byte, so os bits que sao de P
 :   eor pw_buf,x
     sta pw_buf,x
     inx
-    cpx #19
+    cpx #SENHA_BYTES_P
     bne @b
     rts
 
@@ -1890,50 +1907,464 @@ PwZera:
     ldx #0
 :   stz pw_buf,x
     inx
-    cpx #20
+    cpx #SENHA_BYTES
     bne :-
     ldx #0
     stx pw_pos
     rts
 
-; X = deslocamento na tabela: pw_adr, pw_tam, pw_n, pw_min, pw_max
+; ---- numero grande (SENHA_BIG bytes)
+BigZera:
+    .a8
+    .i16
+    ldx #0
+:   stz pw_big,x
+    inx
+    cpx #SENHA_BIG
+    bne :-
+    rts
+
+; pw_big = pw_big * pw_rad + pw_dig
+BigMulAdd:
+    .a8
+    .i16
+    A16
+    ldx #0
+:   lda pw_big,x
+    sta pw_t,x
+    stz pw_big,x
+    inx
+    inx
+    cpx #SENHA_BIG
+    bne :-
+    lda pw_rad
+    sta pw_r2
+    lda #16
+    sta pw_cnt
+@b: ldx #0                  ; big *= 2
+    ldy #(SENHA_BIG/2)
+    clc
+:   rol pw_big,x
+    inx
+    inx
+    dey
+    bne :-
+    asl pw_r2               ; bit da base (do mais alto)
+    bcc @n
+    ldx #0                  ; big += t
+    ldy #(SENHA_BIG/2)
+    clc
+:   lda pw_big,x
+    adc pw_t,x
+    sta pw_big,x
+    inx
+    inx
+    dey
+    bne :-
+@n: dec pw_cnt
+    bne @b
+    ldx #0                  ; big += digito
+    ldy #(SENHA_BIG/2)
+    lda pw_dig
+    clc
+:   adc pw_big,x
+    sta pw_big,x
+    lda #0
+    inx
+    inx
+    dey
+    bne :-
+    A8
+    rts
+
+; pw_dig = pw_big mod pw_rad; pw_big = pw_big / pw_rad
+BigDivMod:
+    .a8
+    .i16
+    A16
+    stz pw_rem
+    stz pw_rem+2
+    lda #(SENHA_BIG*8)
+    sta pw_cnt
+@b: ldx #0                  ; big <<= 1, o bit de cima vai para o resto
+    ldy #(SENHA_BIG/2)
+    clc
+:   rol pw_big,x
+    inx
+    inx
+    dey
+    bne :-
+    rol pw_rem
+    rol pw_rem+2
+    lda pw_rem+2
+    bne @sub
+    lda pw_rem
+    cmp pw_rad
+    bcc @n
+@sub:
+    sec
+    lda pw_rem
+    sbc pw_rad
+    sta pw_rem
+    lda pw_rem+2
+    sbc #0
+    sta pw_rem+2
+    inc pw_big              ; o bit 0 acabou de entrar zerado
+@n: dec pw_cnt
+    bne @b
+    lda pw_rem
+    sta pw_dig
+    A8
+    rts
+
+; os SENHA_BITS_P bits de baixo de pw_big -> pw_buf a partir do bit 0 (o mais alto primeiro)
+BigParaBits:
+    .a8
+    .i16
+    ldx #0
+    stx pw_pos
+    ldx #(SENHA_BITS_P-1)
+    stx pw_i
+@b: jsr PwMascI
+    and pw_big,y
+    beq @z
+    jsr PwMasc
+    ora pw_buf,y
+    sta pw_buf,y
+@z: A16
+    inc pw_pos
+    dec pw_i
+    A8
+    bpl @b                  ; (pw_i < 128: o byte de cima e 0 ate passar de 0)
+    rts
+
+; o contrario: os bits 0..SENHA_BITS_P-1 de pw_buf -> pw_big
+BitsParaBig:
+    .a8
+    .i16
+    jsr BigZera
+    ldx #0
+    stx pw_pos
+    ldx #(SENHA_BITS_P-1)
+    stx pw_i
+@b: jsr PwMasc
+    and pw_buf,y
+    beq @z
+    jsr PwMascI
+    ora pw_big,y
+    sta pw_big,y
+@z: A16
+    inc pw_pos
+    dec pw_i
+    A8
+    bpl @b
+    rts
+
+; X = deslocamento do campo na tabela (10 bytes): pw_tipo, pw_tam, pw_adr, pw_rad
 PwMeta:
     .a8
     .i16
-    A16
+    stx pw_x
     lda f:SenhaCampos,x
+    sta pw_tipo
+    lda f:SenhaCampos+1,x
+    sta pw_tam
+    stz pw_tam+1
+    A16
+    lda f:SenhaCampos+2,x
     sta pw_adr
     lda f:SenhaCampos+4,x
-    sta pw_min
-    lda f:SenhaCampos+6,x
-    sta pw_min+2
-    lda f:SenhaCampos+8,x
-    sta pw_max
-    lda f:SenhaCampos+10,x
-    sta pw_max+2
-    lda f:SenhaCampos+2,x
-    and #$00FF
-    sta pw_tam
+    sta pw_rad
     A8
-    lda f:SenhaCampos+3,x
-    sta pw_n
     rts
 
-; carry = 1 se pw_v > pw_max
-PwAcimaMax:
+; valor do campo (1, 2 ou 4 bytes) -> pw_v
+PwLe:
     .a8
     .i16
     A16
-    lda pw_max+2
-    cmp pw_v+2
-    bne :+
-    lda pw_max
-    cmp pw_v
-:   A8
-    rol a                   ; carry = max >= v
-    eor #1
-    lsr a
+    stz pw_v
+    stz pw_v+2
+    A8
+    ldy pw_adr
+    ldx #0
+:   lda a:0,y
+    sta pw_v,x
+    iny
+    inx
+    cpx pw_tam
+    bne :-
     rts
+
+; pw_v -> campo (pw_tam bytes)
+PwGrava:
+    .a8
+    .i16
+    ldy pw_adr
+    ldx #0
+:   lda pw_v,x
+    sta a:0,y
+    iny
+    inx
+    cpx pw_tam
+    bne :-
+    rts
+
+; ---- digito de cada tipo (gerar): campo -> pw_dig
+PwDigito:
+    .a8
+    .i16
+    jsr PwLe
+    lda pw_tipo
+    cmp #SENHA_T_TAB
+    bne :+
+    jmp PwDigTab
+:   cmp #SENHA_T_DIN
+    bne :+
+    jmp PwDigDin
+:   cmp #SENHA_T_LVXP
+    bne :+
+    jmp PwDigLvxp
+:   ; faixa: teto, piso, tira o piso e desloca
+    ldx pw_x
+    lda f:SenhaCampos+7,x   ; maximo
+    A16
+    and #$00FF
+    cmp pw_v
+    bcs :+
+    sta pw_v
+:   A8
+    lda f:SenhaCampos+6,x   ; minimo
+    A16
+    and #$00FF
+    sta pw_dig
+    lda pw_v
+    cmp pw_dig
+    bcs :+
+    lda pw_dig
+:   sec
+    sbc pw_dig
+    sta pw_dig
+    A8
+    A16
+    lda f:SenhaCampos+8,x   ; deslocamento
+    and #$00FF
+    beq @r
+    tay
+:   lsr pw_dig
+    dey
+    bne :-
+@r: A8
+    rts
+
+; degraus: o maior indice com tabela[i] <= valor
+PwDigTab:
+    .a8
+    .i16
+    ldx pw_x
+    A16
+    lda f:SenhaCampos+6,x
+    tax
+    stz pw_dig
+@l: lda pw_dig
+    inc a
+    cmp pw_rad
+    bcs @r
+    lda f:SENHA_BANCO_TAB+2,x
+    cmp pw_v
+    beq :+
+    bcs @r
+:   inc pw_dig
+    inx
+    inx
+    bra @l
+@r: A8
+    rts
+
+; dinheiro: < 1024 exato; senao 512 * k + (v >> k), com 512 <= v >> k < 1024
+PwDigDin:
+    .a8
+    .i16
+    A16
+    lda pw_v+2              ; teto: $FF0000 (o expoente vai ate SENHA_DIN_EXP-1)
+    cmp #$00FF
+    bcc :+
+    stz pw_v
+    lda #$00FF
+    sta pw_v+2
+:   stz pw_dig              ; 512 * k
+@k: lda pw_v+2
+    bne @desl
+    lda pw_v
+    cmp #1024
+    bcc @fim
+@desl:
+    lsr pw_v+2
+    ror pw_v
+    lda pw_dig
+    clc
+    adc #SENHA_DIN_MANT
+    sta pw_dig
+    bra @k
+@fim:
+    clc
+    adc pw_dig
+    sta pw_dig
+    A8
+    rts
+
+; desafios + nivel + xp -> indice na tabela SenhaLv* (nivel preso a faixa dos desafios)
+PwDigLvxp:
+    .a8
+    .i16
+    lda s_boss
+    cmp #5
+    bcc :+
+    lda #4
+:   sta pw_v                ; desafios
+    ldx #0
+:   lda f:SenhaLvDes,x      ; primeira entrada desses desafios
+    cmp pw_v
+    beq :+
+    inx
+    bra :-
+:   lda s_level
+    cmp f:SenhaLvNiv,x
+    bcc @ok                 ; abaixo da faixa: a primeira
+@prox:
+    cmp f:SenhaLvNiv,x
+    beq @ok
+    lda f:SenhaLvDes+1,x    ; ultima entrada desses desafios: para
+    cmp pw_v
+    bne @ok
+    inx
+    lda s_level
+    bra @prox
+@ok:
+    A16
+    txa
+    asl a
+    tax
+    lda f:SenhaLvIni+2,x    ; xp maximo nesse nivel (em passos)
+    sec
+    sbc f:SenhaLvIni,x
+    dec a
+    sta pw_rem
+    lda s_xp
+    ldy #SENHA_XP_DESL
+:   lsr a
+    dey
+    bne :-
+    cmp pw_rem
+    bcc :+
+    lda pw_rem
+:   clc
+    adc f:SenhaLvIni,x
+    sta pw_dig
+    A8
+    rts
+
+; ---- digito -> campo (ler): pw_dig -> RAM
+PwPoeCampo:
+    .a8
+    .i16
+    lda pw_tipo
+    cmp #SENHA_T_TAB
+    bne :+
+    ldx pw_x
+    A16
+    lda f:SenhaCampos+6,x
+    sta pw_rem
+    lda pw_dig
+    asl a
+    clc
+    adc pw_rem
+    tax
+    lda f:SENHA_BANCO_TAB,x
+    sta pw_v
+    stz pw_v+2
+    A8
+    jmp PwGrava
+:   cmp #SENHA_T_DIN
+    bne @nd
+    A16
+    stz pw_v+2
+    lda pw_dig
+    cmp #1024
+    bcs :+
+    sta pw_v
+    A8
+    jmp PwGrava
+:   .a16
+    xba                     ; k = digito / 512 - 1 (A16: alto = digito >> 8)
+    lsr a
+    and #$007F
+    dec a
+    tay
+    lda pw_dig
+    and #(SENHA_DIN_MANT-1)
+    ora #SENHA_DIN_MANT
+    sta pw_v
+    cpy #0
+    beq :++
+:   asl pw_v
+    rol pw_v+2
+    dey
+    bne :-
+:   A8
+    jmp PwGrava
+@nd:
+    cmp #SENHA_T_LVXP
+    bne @faixa
+    ldx #0                  ; maior entrada com inicio <= digito
+:   A16
+    lda f:SenhaLvIni+2,x
+    cmp pw_dig
+    beq :+
+    bcs :++
+:   inx
+    inx
+    bra :--
+:   lda pw_dig
+    sec
+    sbc f:SenhaLvIni,x
+    ldy #SENHA_XP_DESL
+:   asl a
+    dey
+    bne :-
+    sta s_xp
+    txa
+    lsr a
+    tax
+    A8
+    lda f:SenhaLvDes,x
+    sta s_boss
+    lda f:SenhaLvNiv,x
+    sta s_level
+    rts
+@faixa:
+    ldx pw_x
+    A16
+    lda f:SenhaCampos+8,x   ; deslocamento
+    and #$00FF
+    tay
+    lda pw_dig
+    cpy #0
+    beq :++
+:   asl a
+    dey
+    bne :-
+:   sta pw_v
+    A8
+    lda f:SenhaCampos+6,x   ; minimo
+    A16
+    and #$00FF
+    clc
+    adc pw_v
+    sta pw_v
+    stz pw_v+2
+    A8
+    jmp PwGrava
 
 ; RAM -> pw_sym (jogo atual -> password)
 SenhaGera:
@@ -1948,85 +2379,40 @@ SenhaGera:
     and #$07
     sta pw_trof
     lda s_tflags
-    and #$0F
+    and #$07
     sta pw_tflags
-    jsr PwZera
-    A16
     lda #SENHA_VERSAO
-    sta pw_v
-    stz pw_v+2
-    A8
-    lda #SENHA_BITS_VERSAO
-    sta pw_n
-    jsr PwPoe
+    sta pw_versao
+    jsr BigZera
     ldx #0
-@c: phx
-    jsr PwMeta
-    ; valor do campo (1, 2 ou 4 bytes)
+@c: jsr PwMeta
+    jsr PwDigito
+    jsr BigMulAdd
     A16
-    stz pw_v
-    stz pw_v+2
-    A8
-    ldy pw_adr
-    ldx #0
-:   lda a:0,y
-    sta pw_v,x
-    iny
-    inx
-    cpx pw_tam
-    bne :-
-    ; teto e piso, depois tira o piso
-    jsr PwAcimaMax
-    bcc :+
-    A16
-    lda pw_max
-    sta pw_v
-    lda pw_max+2
-    sta pw_v+2
-    A8
-:   A16
-    lda pw_v+2
-    cmp pw_min+2
-    bne :+
-    lda pw_v
-    cmp pw_min
-:   bcs :+
-    lda pw_min
-    sta pw_v
-    lda pw_min+2
-    sta pw_v+2
-:   sec
-    lda pw_v
-    sbc pw_min
-    sta pw_v
-    lda pw_v+2
-    sbc pw_min+2
-    sta pw_v+2
-    A8
-    jsr PwPoe
-    A16
-    pla
+    lda pw_x
     clc
-    adc #12
+    adc #10
     tax
     A8
-    cpx #(SENHA_CAMPOS*12)
+    cpx #(SENHA_CAMPOS*10)
     bne @c
-    ; verificacao, embaralha e grava a verificacao com a chave
+    ; bits: P, verificacao (com a chave) e embaralha P
+    jsr PwZera
+    jsr BigParaBits
     jsr PwCrc
     A16
     lda pw_crc
-    and #$07FF
+    and #SENHA_MASC_VER
     sta pw_ver
     A8
     jsr PwEmbaralha
     A16
     lda pw_ver
     eor #SENHA_CHAVE_VER
-    and #$07FF
+    and #SENHA_MASC_VER
     sta pw_v
     stz pw_v+2
-    lda #SENHA_POS_VER
+    lda #SENHA_BITS_P
     sta pw_pos
     A8
     lda #SENHA_BITS_VER
@@ -2069,7 +2455,7 @@ SenhaLe:
     bne @s
     ; verificacao (tira a chave) e zera os bits dela antes do CRC
     A16
-    lda #SENHA_POS_VER
+    lda #SENHA_BITS_P
     sta pw_pos
     A8
     lda #SENHA_BITS_VER
@@ -2078,37 +2464,94 @@ SenhaLe:
     A16
     lda pw_v
     eor #SENHA_CHAVE_VER
-    and #$07FF
+    and #SENHA_MASC_VER
     sta pw_ver
+    lda #SENHA_BITS_P
+    sta pw_pos
     A8
-    lda pw_buf+18
-    and #$F8
-    sta pw_buf+18
-    stz pw_buf+19
+@zv:
+    jsr PwMasc
+    eor #$FF
+    and pw_buf,y
+    sta pw_buf,y
+    A16
+    inc pw_pos
+    lda pw_pos
+    cmp #(SENHA_N*5)
+    A8
+    bne @zv
     jsr PwEmbaralha
     jsr PwCrc
     A16
     lda pw_crc
-    and #$07FF
+    and #SENHA_MASC_VER
     cmp pw_ver
     A8
-    bne @inv
-    ; versao
+    beq :+
+    jmp @inv
+:   ; P em base mista: os digitos saem do ultimo campo para o primeiro
+    jsr BitsParaBig
+    ldx #((SENHA_CAMPOS-1)*2)
+    stx pw_i                ; pw_digs[campo]
+    ldx #((SENHA_CAMPOS-1)*10)
+@d: jsr PwMeta
+    jsr BigDivMod
+    ldy pw_i
+    A16
+    lda pw_dig
+    sta pw_digs,y
+    dec pw_i
+    dec pw_i
+    lda pw_x
+    sec
+    sbc #10
+    tax
+    A8
+    bpl @d
+    ; sobrou algo: o numero passou do maior valido
     ldx #0
-    stx pw_pos
-    lda #SENHA_BITS_VERSAO
-    sta pw_n
-    jsr PwTira
-    lda pw_v
+:   lda pw_big,x
+    beq :+
+    jmp @inv
+:   inx
+    cpx #SENHA_BIG
+    bne :--
+    ; versao (1o campo)
+    lda pw_digs
     cmp #SENHA_VERSAO
-    bne @inv
-    ; 1a passada so confere as faixas; a 2a grava
-    stz pw_pass
-    jsr PwCampos
-    bcc @inv
-    inc pw_pass
-    jsr PwCampos
-    ; o que nao vai no password
+    beq :+
+    jmp @inv
+:   ; grava todos os campos
+    ldx #0
+    stx pw_i
+@g: jsr PwMeta
+    ldy pw_i
+    A16
+    lda pw_digs,y
+    sta pw_dig
+    inc pw_i
+    inc pw_i
+    A8
+    jsr PwPoeCampo
+    A16
+    lda pw_x
+    clc
+    adc #10
+    tax
+    A8
+    cpx #(SENHA_CAMPOS*10)
+    bne @g
+    jsr SenhaDeriva
+    sec
+    rtl
+@inv:
+    clc
+    rtl
+
+; o que nao vai no password: deduzido do resto
+SenhaDeriva:
+    .a8
+    .i16
     lda #'L'
     sta s_magic
     lda #'P'
@@ -2117,6 +2560,42 @@ SenhaLe:
     sta s_magic+2
     lda #'T'
     sta s_magic+3
+    ; pasteis fritos e vendas so contam para as missoes 0 e 1
+    ldx #0
+    stx s_tot_fried
+    stx s_tot_sales
+    stx s_tot_sales+2
+    lda s_mission
+    beq :+
+    ldx #5
+    stx s_tot_fried
+    cmp #2
+    bcc :+
+    ldx #100
+    stx s_tot_sales
+:   ; melhorias compradas = fritadeira + balcao acima do 1
+    lda s_fryer
+    clc
+    adc s_counter
+    sec
+    sbc #2
+    sta s_upgrades
+    lda s_boss              ; capitulos ja anunciados
+    sta s_chapter
+    stz s_ending            ; final: 10 unidades (1 + lojas + franquias)
+    lda s_stores
+    clc
+    adc s_fran
+    cmp #9
+    bcc :+
+    inc s_ending
+:   ; tutorial: a loja so abre depois do 1o dia
+    lda pw_tflags
+    ldx s_day
+    cpx #2
+    bcc :+
+    ora #TUT_BIT
+:   sta s_tflags
     A16
     lda pw_trof
     and #$0007
@@ -2127,64 +2606,12 @@ SenhaLe:
     asl a
     sta s_trof
     A8
-    lda pw_tflags
-    sta s_tflags
     stz hist_n
     stz menu_sel
     stz d_total             ; (TC5 olha o dia: nao vale aqui)
     FAR0 TrophyCheck        ; refaz os trofeus que dependem so do estado
     ldx #0
     stx r_newtrof
-    sec
-    rtl
-@inv:
-    clc
-    rtl
-
-; campos: pw_pass = 0 confere, 1 grava. carry = 1 se todos estao na faixa
-PwCampos:
-    .a8
-    .i16
-    ldx #SENHA_BITS_VERSAO
-    stx pw_pos
-    ldx #0
-@c: phx
-    jsr PwMeta
-    jsr PwTira
-    A16
-    clc
-    lda pw_v
-    adc pw_min
-    sta pw_v
-    lda pw_v+2
-    adc pw_min+2
-    sta pw_v+2
-    A8
-    jsr PwAcimaMax
-    bcc :+
-    plx
-    clc
-    rts
-:   lda pw_pass
-    beq @nx
-    ldy pw_adr
-    ldx #0
-:   lda pw_v,x
-    sta a:0,y
-    iny
-    inx
-    cpx pw_tam
-    bne :-
-@nx:
-    A16
-    pla
-    clc
-    adc #12
-    tax
-    A8
-    cpx #(SENHA_CAMPOS*12)
-    bne @c
-    sec
     rts
 
 ; ---------------------------------------------------------------- tela do password
@@ -2192,8 +2619,8 @@ PwCampos:
 ; {B} apaga (vazio: volta ao titulo), START confere. Valido: com SRAM escolhe
 ; onde salvar (ST_SLOTS, sl_mode 3); sem SRAM vai direto para o dia.
 ; senha_modo 1/2: mostra o password do jogo atual (1 volta a loja, 2 ao titulo).
-PW_LIN   = 7                ; 1a linha do password (a 2a fica 2 abaixo)
-PW_COL   = 6                ; 4 blocos de 4 + 3 espacos = 19 colunas
+PW_LIN   = 7                ; linha do password
+PW_COL   = 4                ; 5 blocos de 4 + 4 espacos = 24 colunas
 PW_TECL0 = 12               ; 1a linha do teclado (a cada 2)
 PW_TECC0 = 5                ; 1a coluna do teclado (a cada 3)
 PW_LINMSG = 21
@@ -2286,16 +2713,7 @@ SenhaLinhas:
     txa
     and #$03
     bne @l
-    txa
-    cmp #16
-    bne :+
-    lda #$FE                ; meio: duas linhas abaixo
-    sta pw_str,y
-    iny
-    sta pw_str,y
-    iny
-    bra @l
-:   lda #FONT_SPACE
+    lda #FONT_SPACE
     sta pw_str,y
     iny
     bra @l

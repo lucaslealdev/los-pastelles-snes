@@ -72,7 +72,7 @@ local function roteiro()
   if r8("senha_modo") ~= 2 then erro("VOLTAR AO MENU nao abriu o password para sair") end
   idle(60); foto("sair")
   local sym = {}
-  for i = 0, 31 do sym[i] = r8("pw_sym", i) end
+  for i = 0, 19 do sym[i] = r8("pw_sym", i) end
   press("a")
   if not espera(0) then return end
   idle(120)
@@ -83,7 +83,7 @@ local function roteiro()
   press("a")
   if not espera(14) then return end
   idle(30)
-  for i = 0, 31 do digita(sym[i]) end
+  for i = 0, 19 do digita(sym[i]) end
   press("start")
   for _ = 1, 300 do if r8("state") ~= 14 then break end idle(1) end
   local st = r8("state")
