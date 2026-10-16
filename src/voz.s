@@ -9,6 +9,7 @@
 ; =====================================================================
 
 LOTE_MAX = 72               ; bytes por lote (24 trios, ~2 ms): reparte o tempo ocioso
+MUS_CRITICO = 1125          ; musica com menos que isso no anel (0,2 s a 10 kHz) passa na frente
 
 ; Lote: manda trios direto da ROM ([ptr],y), sem eventos no meio (o chamador ja
 ; limitou o tamanho: X = bytes que podem ir). Busca os 3 bytes seguintes enquanto o
@@ -176,7 +177,25 @@ Bomba:
     ldx vz_carga            ; primeiro a carga das vozes fixas
     beq :+
     jmp VozCargaTrio
-:   ldx vz_anel             ; falas primeiro: se mandaram um lote, a musica espera a
+:   ; musica quase vazia (< 0,2 s) com a fala folgada (> metade da folga dela): a
+    ; musica vai primeiro nesta volta (uma fala longa num trecho pesado secava o anel)
+    lda mu_est
+    cmp #2
+    bne @fala
+    A16
+    lda mu_nivel+1
+    cmp #MUS_CRITICO
+    bcs @fala16
+    lda vz_folga
+    lsr a
+    cmp vz_nivel+1
+    bcs @fala16
+    A8
+    jmp MusBomba
+@fala16:
+    A8
+@fala:
+    ldx vz_anel             ; falas primeiro: se mandaram um lote, a musica espera a
     stx lt_ant              ; proxima volta (ela tem 0,5 s de folga para atravessar)
     jsr VozBomba
     ldx vz_anel
