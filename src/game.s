@@ -2816,7 +2816,7 @@ DayDraw:
     adc #8
     sta spr_x
     A8
-    lda #162
+    lda #158                ; pastel na mao do fundador (FND_Y - 6)
     sta spr_y
     jsr AddSprite
 @nohold:
@@ -2844,7 +2844,7 @@ DayDraw:
     lda #SPR_REFRI_P
     sta spr_tile
     A8
-    lda #166
+    lda #162
     sta spr_y
     stz spr_size
     jsr AddSprite
@@ -2892,12 +2892,12 @@ DayDraw:
     lda #SPR_FOUNDER_1
     sta spr_tile
     A8
-:   lda #168
+:   lda #164                ; os pes ficam na borda de cima do painel da HUD (y 196)
     sta spr_y
     lda masc_t
     and #$04
     beq :+
-    lda #164
+    lda #160
     sta spr_y
 :
     lda #$34
