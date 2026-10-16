@@ -802,7 +802,7 @@ function buildSprites(emojis = {}) {
       for (let j = 0; j < sz && ok; j++) for (let i = 0; i < sz; i++) if (occ[(ty + j) * 16 + tx + i]) { ok = false; break; }
       if (ok) { for (let j = 0; j < sz; j++) for (let i = 0; i < sz; i++) occ[(ty + j) * 16 + tx + i] = true; return { tx, ty }; }
     }
-    throw new Error('folha de sprites cheia');
+    throw new Error('folha de sprites cheia (sz ' + sz + ')\n' + Array.from({ length: 32 }, (_, y) => occ.slice(y * 16, y * 16 + 16).map((o) => (o ? '#' : '.')).join('')).join('\n'));
   }
   function put(name, img, pal, minTy = 0) {
     const sz = img.w / 8, { tx, ty } = alloc(sz, minTy);
@@ -828,7 +828,7 @@ function buildSprites(emojis = {}) {
     put(`ICON_${i}`, im, 0); minis.push(mini(im));
   });
   put('MASCOTE_0', mascote(false), 1); put('MASCOTE_1', mascote(true), 1);
-  for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'loja', 'franquia', 'estrela', 'refri', 'mao']) put(n.toUpperCase(), emo(n, () => icon(n)), 0);
+  for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'estrela', 'refri', 'mao']) put(n.toUpperCase(), emo(n, () => icon(n)), 0);
   put('REFRI_P', refriP(), 0);
   // menu de pausa: continuar e sair (sem emoji: triangulo e casinha simples)
   put('PAUSA_CONT', emo('continuar', () => { const I = new Img(16, 16); I.rect(1, 1, 14, 14, 15); for (let j = 0; j < 8; j++) I.rect(5, 4 + j / 2 | 0, 1 + j, 8 - (j & ~1), 2); I.outline(1); return I; }), 0);
