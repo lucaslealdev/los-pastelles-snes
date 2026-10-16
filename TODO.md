@@ -88,10 +88,9 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Arte baseada em emojis/glyphs da internet (Twemoji, como o resto do projeto), com quadros intermediários gerados por morph entre os quadros-chave para suavizar o movimento.
      - Gerar tudo por script em `gerador/` (como `emoji_sprites.py`); verificar espaço em banco/VRAM. Montar o gerador de morph de forma reutilizável para o item 11.
 
-11. - [ ] **Animação de erro: pastel indo para a lixeira.** *(depende do 10)*
-      - Quando a montagem falhar, mostrar o pastel caindo numa lixeira 🗑️. Mesmo método: emojis, 5 quadros-chave + morphs, reaproveitando o gerador e o player de animação do item 10.
-      - Fase 1 feita: `gerador/lixeira.py` gera os 5 quadros-chave (camadas + `gen/lixeira/quadros.json` com x/y/ângulo/escala, para interpolar transformações) com base na referência `arte_fonte/lixeira/gemini_referencia.png`.
-      - Onde entra: em `MiniGame` (`src/game.s`), no ramo `@fail` com `mg_mode = 0` (logo depois de `inc d_waste`, junto do `VOZ_ABRIU`/`TXT_M_ABRIU`/`SFX_LIXO`). Chegam lá o botão errado fora do tutorial (`@errou` com `tut_step = $FF`) e o tempo esgotado (`mg_timer` chega a 0; no tutorial o tempo não corre e o erro só faz `SFX_ERRO`, então a animação nunca aparece no tutorial). `mg_mode ≠ 0` é o conserto do cesto quebrado (sem pastel): não anima. O descarte com {B} (`DayInput`, `TXT_M_LIXO`) pode reaproveitar a mesma animação, curta.
+11. - [x] **Animação de erro: pastel indo para a lixeira.** *(depende do 10)*
+      - Feito: `gerador/anim_lixeira.py` (referência `arte_fonte/lixeira/gemini_referencia.png`, gerada no Gemini): pastel aberto, lata com tampa e poeira 💨, 5 quadros-chave e intermediários que interpolam posição e ângulo das camadas (17 quadros). `MgaErro` toca a sequência no botão errado e no tempo esgotado (nunca no tutorial nem no conserto do cesto). Teste: `teste/lixeira.lua`.
+      - Ideia futura: o descarte com {B} (`DayInput`, `TXT_M_LIXO`) pode reaproveitar a mesma animação, mais curta.
 
 12. - [ ] **Sistema de password (salvar sem SRAM).** *(depois do 4: o password aparece na loja)*
       - **Uma única ROM.** No boot, detectar se o cartucho tem SRAM: gravar e reler dois padrões diferentes (ex.: `$55`/`$AA`) num endereço de SRAM, sem confiar em open bus, e restaurar o byte original. Guardar o resultado numa variável (ex.: `tem_sram`).
