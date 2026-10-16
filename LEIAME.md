@@ -32,7 +32,7 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 - Pedido duplo (nível 4+): balão com "2" = entregue dois pastéis.
 - Duelo semanal com o Concorrente (dias 7, 14, 21...): bata a meta de clientes satisfeitos e ganhe R$ 100.
 - 3 jogos salvos (NOVO JOGO / CONTINUAR abrem a escolha do espaço).
-- **Password** para continuar sem bateria: na loja, VER PASSWORD mostra um código de 20 caracteres (5 blocos de 4); na tela inicial, PASSWORD digita o código e volta ao mesmo ponto do jogo. Num cartucho sem SRAM o jogo percebe sozinho, não mostra CONTINUAR e, ao voltar ao menu, mostra o password antes de sair.
+- **Password** para continuar de onde parou: na loja, VER PASSWORD mostra um código de 20 caracteres (5 blocos de 4); na tela inicial, PASSWORD digita o código e volta ao mesmo ponto do jogo. Num cartucho sem a função de salvar, o jogo percebe sozinho, não oferece CONTINUAR nem a escolha de espaço e, ao voltar ao menu, mostra o password antes de sair.
 - Tipos de cliente: criança (boné, tem pressa e paga meia), idoso (óculos, espera mais e dá gorjeta boa) e turista (chapéu de palha, pede o mais caro e paga R$ 3 a mais).
 - 16 troféus salvos no cartucho (loja: VER TROFÉUS).
 - Reforma do salão em 2 etapas (vitrine com pastéis no balcão; depois loja premium com bandeirinhas, flores e letreiro dourado) e novos itens: freezer, ar-condicionado, música ambiente e uniforme. A loja é dividida em abas (DIA, LOJA, EQUIPE, REDE): **L**/**R** (ou ◀/▶) trocam de aba.
@@ -55,7 +55,7 @@ monta a ROM com o cc65 (em `tools/cc65`).
 
 ## Gravar no cartucho
 - **Arquivo:** `LosPastelles.sfc` — 2 MB (16 Mbit), mapa **LoROM**, cabeçalho e checksum válidos, região NTSC.
-- **Placa:** LoROM **com SRAM e bateria** (o jogo usa 2 KB; placas com 8 KB de SRAM também servem). Sem SRAM o jogo roda, mas não salva.
+- **Placa:** LoROM **com SRAM e bateria** (o jogo usa 2 KB; placas com 8 KB de SRAM também servem). Sem SRAM o jogo roda e continua pelo password.
 - **Memória:** ROM/flash de pelo menos 16 Mbit; não precisa de memória rápida (funciona como SlowROM).
 - **Teste antes:** se possível rode primeiro num flashcart (FXPAK/EverDrive) ou numa flash regravável.
 - **Etiqueta e manual:** pasta `cartucho/` — `etiqueta_formato_classico.png` (mesmo formato e proporção do modelo de etiqueta frontal), `etiqueta_frente_70x50mm_600dpi.png` (alternativa) e o manual em PDF (A5, 6 páginas). Imprima a etiqueta na medida do modelo do seu cartucho. Para regerar: `python gerador/cartucho.py`.

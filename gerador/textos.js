@@ -106,10 +106,11 @@ const T = {
   TR_TIT: 'TROFÉUS', TR_DE: '/16', TR_SIM: '*', TR_NAO: '-', TR_VOLTAR: '{B}: VOLTAR',
   SD_18: 'SALVA O JOGO E VOLTA\nPARA A TELA INICIAL.',
   SD_19: 'SALVA O JOGO E COMEÇA\nO PRÓXIMO DIA.',
-  SD_20: 'MOSTRA O PASSWORD DESTE\nJOGO: COM ELE DÁ PARA\nCONTINUAR SEM BATERIA.',
-  // sem SRAM (cartucho sem bateria): o jogo nao salva, so mostra o password
+  SD_20: 'MOSTRA O PASSWORD DESTE\nJOGO PARA CONTINUAR\nDE ONDE PAROU.',
+  // cartucho sem SRAM: o jogo nao salva, so mostra o password (sem falar em bateria
+  // para o jogador: esses cartuchos nao tem como receber uma)
   SD_18N: 'MOSTRA O PASSWORD E VOLTA\nPARA A TELA INICIAL.',
-  SD_19N: 'COMEÇA O PRÓXIMO DIA.\nSEM BATERIA: ANOTE O\nPASSWORD ANTES DE SAIR.',
+  SD_19N: 'COMEÇA O PRÓXIMO DIA.\nANOTE O PASSWORD\nANTES DE SAIR.',
   ST_P0: '-R$ 1', ST_P1: 'NORMAL', ST_P2: '+R$ 1', ST_P3: '+R$ 2',
   ST_MAX: 'MÁXIMO', ST_NV: 'NV', ST_ATIVO: 'ATIVO', ST_REP: 'REP 70', ST_RS: 'R$',
   SM_OK: 'COMPRADO!', SM_SEM: 'DINHEIRO INSUFICIENTE!', SM_BLOQ: 'BLOQUEADO: SUBA DE NÍVEL.',
