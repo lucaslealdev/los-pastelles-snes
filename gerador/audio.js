@@ -2,12 +2,14 @@
 'use strict';
 
 // ---------- mapa da memoria do SPC700 (64 KB)
-//  $0200 driver | $0300 diretorio de samples | $0400-$CFFF vozes fixas e chiado
-//  $D000-$DFFF eco (ESA/EDL=2) | $E000-$E7FA anel das falas (227 blocos BRR)
-//  $E800-$FFBA anel da musica (675 blocos BRR)
-const ARAM = { DRIVER: 0x0200, DIR: 0x0300, FIXAS: 0x0400, FIXAS_FIM: 0xD000,
-  ECO: 0xD000, ECO_FIM: 0xE000,
-  FALA: 0xE000, FALA_LEN: 227 * 9, MUSICA: 0xE800, MUSICA_LEN: 675 * 9 };
+//  $0200 driver | $0300 diretorio de samples | $0400-$C3FF vozes fixas e chiado
+//  $C400-$D3FF eco (ESA/EDL=2) | $D400-$DFB4 anel das falas (333 blocos BRR)
+//  $E000-$FFBE anel da musica (903 blocos BRR)
+// (aneis grandes = folgas maiores para atravessar os quadros mais pesados com as
+// taxas altas; as vozes fixas a 9 kHz ocupam ate $C37E)
+const ARAM = { DRIVER: 0x0200, DIR: 0x0300, FIXAS: 0x0400, FIXAS_FIM: 0xC400,
+  ECO: 0xC400, ECO_FIM: 0xD400,
+  FALA: 0xD400, FALA_LEN: 333 * 9, MUSICA: 0xE000, MUSICA_LEN: 903 * 9 };
 const SRCN = { MUSICA: 3, FRITURA: 4, FALA: 5, FIXA0: 6 };   // 0-2: ondas do chiptune
 
 // ---------- mini montador de SPC700 (so o que o driver usa)

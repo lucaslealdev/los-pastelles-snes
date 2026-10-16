@@ -115,6 +115,8 @@ function converte(nome, arq, taxa, gera) {
 }
 
 // taxa das fixas: a maior da lista em que fixas + fritura cabem em 'espaco' bytes
+// (conta bloco a bloco: cada voz e arredondada para blocos de 16 amostras, + o
+// alinhamento de 3 bytes do envio)
 function taxaFixas(espaco) {
   const idx = carregaIndice();
   const dur = (v) => {
@@ -122,9 +124,12 @@ function taxaFixas(espaco) {
     if (e) return e.amostras / e.taxa;
     return pcm(v.arq, 8000, true).length / 8000; // sem cache: mede com o ffmpeg
   };
-  const total = VOZES.filter((v) => v.tipo === 'fixa').reduce((s, v) => s + dur(v), 0) + FRITURA.dur;
-  for (const t of TAXAS_FIXAS) if (Math.ceil(total * t / 16 + VOZES.length) * 9 <= espaco) return t;
-  throw new Error(`vozes fixas (${total.toFixed(1)} s) nao cabem em ${espaco} bytes`);
+  const durs = [...VOZES.filter((v) => v.tipo === 'fixa').map(dur), FRITURA.dur];
+  for (const t of TAXAS_FIXAS) {
+    const bytes = durs.reduce((s, d) => s + Math.ceil(d * t / 16) * 9, 0) + 2;
+    if (bytes <= espaco) return t;
+  }
+  throw new Error(`vozes fixas nao cabem em ${espaco} bytes`);
 }
 
 // gera tudo: { fixas: [{id, brr}], fritura: brr, streams: [{id, brr, loop}], taxas }

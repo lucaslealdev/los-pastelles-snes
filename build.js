@@ -254,6 +254,8 @@ const music = AU.musicData();
 // bancos 32-63, a segunda metade da ROM de 2 MB (um stream pode atravessar de um banco
 // para o seguinte). Os bancos 13-27 ficaram livres quando o audio foi para la.
 const SONS_BANCO = 32, SONS_FIM = 63;
+// segundos de folga nos aneis (o que atravessa quadros pesados e falas por cima da musica)
+const FOLGA_S = { musica: 0.7, fala: 0.2 };
 const partes = [fixas];
 let ofs = fixas.length;
 const streams = SO.streams.map((v) => { const o = ofs; partes.push(v.brr); ofs += v.brr.length; return { ...v, ofs: o }; });
@@ -284,7 +286,7 @@ inc.push(`SPC_SIZE = ${spc.length}`);
   const V = [...SO.fixas, ...streams];
   V.forEach((v, i) => inc.push(`VOZ_${v.id} = ${i}`));
   inc.push(`VOZ_N = ${V.length}`, `MUSICA_ARAM = ${hex4(AU.ARAM.MUSICA)}`, `MUSICA_LEN = ${AU.ARAM.MUSICA_LEN}`,
-    `FALA_ARAM = ${hex4(AU.ARAM.FALA)}`, `FALA_LEN = ${AU.ARAM.FALA_LEN}`, `SRCN_MUSICA = ${AU.SRCN.MUSICA}`, `SRCN_FALA = ${AU.SRCN.FALA}`, `SRCN_FRITURA = ${AU.SRCN.FRITURA}`, `FRITURA_PITCH = ${hex4(pitch(SO.taxaFixas))}`,
+    `FALA_ARAM = ${hex4(AU.ARAM.FALA)}`, `FALA_LEN = ${AU.ARAM.FALA_LEN}`, `ECO_ARAM = ${hex4(AU.ARAM.ECO)}`, `SRCN_MUSICA = ${AU.SRCN.MUSICA}`, `SRCN_FALA = ${AU.SRCN.FALA}`, `SRCN_FRITURA = ${AU.SRCN.FRITURA}`, `FRITURA_PITCH = ${hex4(pitch(SO.taxaFixas))}`,
     `FIXAS_ARAM = ${hex4(AU.ARAM.FIXAS)}`, `FIXAS_LEN = ${fixas.length}`, `FIXAS_ROM = ${romEnd(0)}`);
   const tab = ['; gerado por build.js - tabelas das vozes (gerador/sons.js)'];
   const col = (nome, dir, fn) => tab.push(`${nome}: ${dir} ` + V.map(fn).join(', '));
@@ -297,7 +299,16 @@ inc.push(`SPC_SIZE = ${spc.length}`);
   col('VozRom', '.faraddr', (v) => (v.tipo === 'fixa' ? '0' : romEnd(v.ofs)));
   col('VozLen', '.faraddr', (v) => (v.tipo === 'fixa' ? 0 : v.brr.length));
   col('VozBpq', '.word', (v) => Math.round(v.taxa * 9 / 16 / FPS * 256));          // bytes por quadro (8.8)
-  col('VozFolga', '.word', (v) => Math.round(v.taxa * 9 / 16 * (v.tipo === 'musica' ? 0.5 : 0.15) / 3) * 3); // folga no anel
+  const folga = (v) => Math.round(v.taxa * 9 / 16 * FOLGA_S[v.tipo === 'musica' ? 'musica' : 'fala'] / 3) * 3;
+  col('VozFolga', '.word', folga); // folga no anel
+  // o ressincronismo (VozQuadro/MusQuadro) acha que a escrita ainda nao deu a volta
+  // quando ela passa de 3/4 do anel: folga + um lote + um quadro tem de caber nisso
+  for (const v of V) {
+    if (v.tipo === 'fixa') continue;
+    const anel = v.tipo === 'musica' ? AU.ARAM.MUSICA_LEN : AU.ARAM.FALA_LEN;
+    const max = folga(v) + 72 + Math.ceil(v.taxa * 9 / 16 / FPS);
+    if (max > anel * 3 / 4) throw new Error(`voz ${v.id}: folga ${folga(v)} + lote + quadro = ${max} passa de 3/4 do anel (${anel})`);
+  }
   // cartas que falam (CARD_* -> VOZ_* ou $FF)
   const CV = { BOSS_0: 'DESAFIO', BOSS_1: 'DESAFIO', BOSS_2: 'DESAFIO', BOSS_3: 'DESAFIO', DUELO: 'DESAFIO',
     VITORIA: 'VITORIA', DUELO_OK: 'VITORIA', DERROTA: 'DERROTA', DUELO_NO: 'DERROTA', FIM: 'IMPERIO' };
