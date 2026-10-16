@@ -942,6 +942,7 @@ SplashInit:
     .i16
     jsr FadeOut
     jsr ScreenOff
+    jsl AbFim               ; sai da abertura RAMON (registradores do resto do jogo)
     jsr LoadMenuScene
     jsr ClearBg3
     PRINT TXT_SP_NOME, 10, 11, 5

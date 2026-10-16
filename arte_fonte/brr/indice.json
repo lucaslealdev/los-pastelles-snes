@@ -152,5 +152,12 @@
   "taxa": 9000,
   "versao": 3,
   "amostras": 4496
+ },
+ "ABERTURA": {
+  "arq": "abertura-ramon",
+  "sha1": "ce36f370931e0759db50088f056706c36d211977",
+  "taxa": 16000,
+  "versao": 3,
+  "amostras": 34320
  }
 }

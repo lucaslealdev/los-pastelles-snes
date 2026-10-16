@@ -344,6 +344,16 @@ inc.push(`UI_N_OPEN = ${UI.N_OPEN}`, `UI_TAB_LEN = ${UI.TAB_LEN}`);
 Object.keys(CARDS).forEach((k, i) => inc.push(`CARD_${k} = ${i}`));
 music.songs.forEach((s, i) => inc.push(`SONG_${s.name.toUpperCase()} = ${i}`));
 music.sfx.forEach((s, i) => inc.push(`SFX_${s.name.toUpperCase()} = ${i}`));
+// abertura "RAMON" (homenagem a Konami): arte_fonte/abertura/abertura.json, de gerador/abertura_ramon.py
+{
+  const AB = require('./gerador/abertura').gerarAbertura(JSON.parse(fs.readFileSync(path.join(ROOT, 'arte_fonte', 'abertura', 'abertura.json'), 'utf8')));
+  w('abertura_tiles.bin', AB.tiles); w('abertura_bg1.bin', AB.bg1); w('abertura_bg2.bin', AB.bg2); w('abertura_pal.bin', AB.pal);
+  w('abertura_obj.bin', AB.objTiles);
+  w('abertura.inc', '; gerado por build.js - quadro em que entra cada paleta da abertura\nAbPalQ: .word ' + AB.quadros.join(', ') +
+    '\n; sprites da perna do R: x, y, tile\nAbObj: ' + AB.oam.map((o) => '.byte ' + o.join(', ')).join('\n       ') + '\n');
+  inc.push(`AB_NPAL = ${AB.quadros.length}`, `AB_NOBJ = ${AB.oam.length}`, `AB_FAISCA = ${hex4(AB.faisca)}`, `AB_FIM = ${AB.quadros[AB.quadros.length - 1] + 8}`);
+  console.log(`abertura: ${AB.nLogo} tiles da logo, ${AB.oam.length} sprites na perna do R, ${AB.quadros.length} paletas, ${AB.quadros[AB.quadros.length - 1] + 8} quadros`);
+}
 w('assets.inc', inc.join('\n') + '\n');
 
 // layout dos textos em caixa: largura (caracteres) e altura (linhas) que cabem

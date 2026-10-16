@@ -42,6 +42,7 @@ const VOZES = [
   { id: 'DERROTA',  arq: 'ah-não-foi-dessa-vez', tipo: 'stream', pri: 2, espera: 0 },
   { id: 'IMPERIO',  arq: 'parabéns-o-império-é-seu', tipo: 'stream', pri: 2, espera: 0 },
   { id: 'TITULO',   arq: 'los-pasteles-o-imperio-do-pastel', tipo: 'stream', pri: 2, espera: 0 },
+  { id: 'ABERTURA', arq: 'abertura-ramon',       tipo: 'stream', pri: 2, espera: 0 },   // jingle da abertura RAMON
   { id: 'TEMA',     arq: 'pastelito-theme-song-1min', tipo: 'musica', pri: 2, espera: 0 },
 ];
 // chiado da fritura: trecho em loop (voz 6), na mesma taxa das fixas

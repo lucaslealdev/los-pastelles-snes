@@ -17,6 +17,7 @@ ST_SPLASH  = 11
 ST_TROF    = 12
 ST_SECRET  = 13
 ST_SENHA   = 14
+ST_ABERTURA = 15         ; abertura RAMON (banco28.s), antes do splash
 
 CUST_Y     = 74
 BUBBLE_Y   = 54

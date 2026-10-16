@@ -3069,3 +3069,291 @@ SenhaUpdateL:
     rtl
 :   jsr SenhaLinhas
 @r: rtl
+
+; ================================================================ ABERTURA "RAMON"
+; Homenagem as aberturas da Konami (a do Sunset Riders), com RAMON no lugar de
+; KONAMI (gerador/abertura.js). BG1 (tiles 16x16) e a cortina preta com o laser:
+; ele entra pela esquerda (HOFS 256 -> 0, 8 px por quadro) e depois desce (VOFS
+; -1 -> -259, 2 px por quadro), revelando a logo no BG2 em contorno azul. O resto
+; (enchimento com brilho, fundo branco e escurecimento) e so paleta: AbPalQ diz
+; em que quadro entra cada uma das AB_NPAL paletas (cores 0..63). A perna do R sao
+; AB_NOBJ sprites 16x16 com prioridade 1 (atras do BG2 e da cortina), na paleta OBJ
+; 0, que acompanha a paleta 2 (AbPalObj). START ou A pula.
+AB_LASER_T  = 42            ; quadro em que o laser comeca a descer
+AB_LASER_V  = $3FF - 258    ; VOFS final (a cortina saiu toda por baixo)
+AB_FAISCA_XY = VRAM_BG1MAP + 1*32 + 16   ; entrada do mapa da faisca (ponta do laser)
+AB_SOM_T    = 177           ; jingle (VOZ_ABERTURA): pedido 4 quadros antes (o anel enche), liga junto com o enchimento de cor
+
+AbInitL:
+    .a8
+    .i16
+    FAR0 ScreenOff
+    FAR0 OamClear
+    lda #$80
+    sta VMAIN
+    ldx #VRAM_BG1TILES      ; BG1 e BG2 usam os mesmos tiles (BG12NBA = 0)
+    stx VMADDL
+    ldx #.loword(AbTiles)
+    stx dma_src
+    lda #^AbTiles
+    sta dma_src+2
+    ldx #(AbTiles_end - AbTiles)
+    stx dma_len
+    FAR0 DmaVram
+    ldx #VRAM_BG1MAP
+    stx VMADDL
+    ldx #.loword(AbBg1)
+    stx dma_src
+    ldx #2048
+    stx dma_len
+    FAR0 DmaVram
+    ldx #VRAM_BG2MAP
+    stx VMADDL
+    ldx #.loword(AbBg2)
+    stx dma_src
+    FAR0 DmaVram
+    ldx #VRAM_OBJ           ; perna do R (os sprites do jogo voltam em AbFim)
+    stx VMADDL
+    ldx #.loword(AbObjTiles)
+    stx dma_src
+    ldx #(AbObjTiles_end - AbObjTiles)
+    stx dma_len
+    FAR0 DmaVram
+    lda #$19                ; modo 1, BG3 com prioridade, BG1 com tiles 16x16
+    sta BGMODE
+    ldx #.loword(AbPal)     ; primeira paleta (tudo preto, o contorno azul escondido)
+    stx dma_src
+    ldx #0
+    ldy #128
+    FAR0 CopyPal
+    jsr AbPalObj
+    ; sprites da perna: x, y, tile (AbObj)
+    lda #1
+    sta spr_size
+    lda #$10                ; prioridade 1, paleta OBJ 0
+    sta spr_attr
+    ldx #0
+@obj:
+    phx
+    lda f:AbObj,x
+    sta spr_x
+    stz spr_x+1
+    lda f:AbObj+1,x
+    sta spr_y
+    lda f:AbObj+2,x
+    sta spr_tile
+    stz spr_tile+1
+    FAR0 AddSprite
+    plx
+    inx
+    inx
+    inx
+    cpx #(AB_NOBJ * 3)
+    bne @obj
+    stz spr_size
+    ldx #0
+    stx ab_t
+    lda #1
+    sta ab_pal
+    sta ab_on
+    jsr AbRolagem
+    stz bright              ; acende no primeiro quadro, com a paleta ja enviada
+    FAR0 ScreenOn
+    FAR0 WaitFrame          ; (a NMI deste quadro ja acha o quadro pronto)
+    rtl
+
+; cortina no quadro ab_t: HOFS = max(0, 256 - 8t); VOFS = -1 ate AB_LASER_T,
+; depois desce 2 px por quadro ate AB_LASER_V. Faisca: forma 0 ate o quadro 4,
+; depois 1, 2, 3, 0... trocando a cada 2 quadros; do 33 em diante fica na 3
+AbRolagem:
+    .a8
+    .i16
+    A16
+    lda ab_t
+    cmp #4
+    bcc @f0
+    cmp #33
+    bcs @f3
+    sec
+    sbc #4
+    lsr a
+    inc a
+    and #3
+    bra @fk
+@f0:
+    lda #0
+    bra @fk
+@f3:
+    lda #3
+@fk:
+    asl a
+    clc
+    adc #AB_FAISCA
+    sta ab_fx
+    lda ab_t
+    cmp #32
+    bcc :+
+    lda #32
+:   asl a
+    asl a
+    asl a
+    eor #$FFFF
+    sec
+    adc #256
+    sta ab_h
+    lda ab_t
+    sec
+    sbc #AB_LASER_T
+    bcs :+
+    lda #0
+:   asl a
+    eor #$FFFF
+    sec
+    adc #$3FF
+    cmp #AB_LASER_V
+    bcs :+
+    lda #AB_LASER_V
+:   sta ab_v
+    A8
+    rts
+
+; paleta OBJ 0 = paleta 2 (a perna do R)
+AbPalObj:
+    .a8
+    .i16
+    ldx #30
+:   lda cgram_buf+64,x
+    sta cgram_buf+256,x
+    lda cgram_buf+65,x
+    sta cgram_buf+257,x
+    dex
+    dex
+    bpl :-
+    rts
+
+AbUpdateL:
+    .a8
+    .i16
+    lda #$0F
+    sta bright
+    jsr AbRolagem
+    ; paletas que entram neste quadro
+@pal:
+    lda ab_pal
+    cmp #AB_NPAL
+    bcs @sem
+    A16
+    and #$00FF
+    asl a
+    tax
+    lda f:AbPalQ,x
+    cmp ab_t
+    A8
+    bne @sem
+    A16
+    txa
+    asl a                   ; indice * 128
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    clc
+    adc #.loword(AbPal)
+    sta dma_src
+    A8
+    lda #^AbPal
+    sta dma_src+2
+    ldx #0
+    ldy #128
+    FAR0 CopyPal
+    jsr AbPalObj
+    inc ab_pal
+    bra @pal
+@sem:
+    ; jingle: segue a opcao MUSICA (nao a de falas, embora toque como uma fala)
+    A16
+    lda ab_t
+    cmp #AB_SOM_T
+    A8
+    bne @nsom
+    lda opt_music
+    beq @nsom
+    lda opt_falas
+    pha
+    lda #1
+    sta opt_falas
+    lda #VOZ_ABERTURA
+    FAR0 VozToca
+    pla
+    sta opt_falas
+@nsom:
+    lda pad_new+1
+    and #KH_START
+    bne @pula
+    lda pad_new
+    and #KL_A
+    bne @pula
+    A16
+    inc ab_t
+    lda ab_t
+    cmp #AB_FIM
+    A8
+    bcs @fim
+    rtl
+@pula:
+    FAR0 VozPara            ; pulou: o jingle para junto
+@fim:
+    lda #ST_SPLASH
+    sta next_state
+    rtl
+
+; NMI (depois da UiNmi): BG1 + BG2 + sprites, com a rolagem da cortina
+AbNmi:
+    .a8
+    .i16
+    lda #$13
+    sta TM
+    lda ab_h
+    sta BG1HOFS
+    lda ab_h+1
+    sta BG1HOFS
+    lda ab_v
+    sta BG1VOFS
+    lda ab_v+1
+    sta BG1VOFS
+    stz BG2HOFS
+    stz BG2HOFS
+    lda #$FF
+    sta BG2VOFS
+    lda #$03
+    sta BG2VOFS
+    lda #$80
+    sta VMAIN
+    ldx #AB_FAISCA_XY
+    stx VMADDL
+    ldx ab_fx
+    stx $2118               ; VMDATA (palavra)
+    rtl
+
+; volta os registradores do resto do jogo (tela ja desligada)
+AbFim:
+    .a8
+    .i16
+    stz ab_on
+    lda #$09
+    sta BGMODE
+    stz BG1HOFS
+    stz BG1HOFS
+    lda #$80                ; os sprites do jogo (a perna do R estava no lugar)
+    sta VMAIN
+    ldx #VRAM_OBJ
+    stx VMADDL
+    ldx #.loword(SprTiles)
+    stx dma_src
+    lda #^SprTiles
+    sta dma_src+2
+    ldx #16384
+    stx dma_len
+    FAR0 DmaVram
+    rtl

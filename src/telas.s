@@ -3,9 +3,9 @@
 ; =====================================================================
 
 StateInit:
-    .word TitleInit, IntroInit, CardInit, PreDayInit, DayInit, ResultsInit, ShopInit, MapInit, OptInit, ChooseInit, SlotsInit, SplashInit, TrofInit, SecretInit, SenhaInit
+    .word TitleInit, IntroInit, CardInit, PreDayInit, DayInit, ResultsInit, ShopInit, MapInit, OptInit, ChooseInit, SlotsInit, SplashInit, TrofInit, SecretInit, SenhaInit, AbInit
 StateUpdate:
-    .word TitleUpdate, IntroUpdate, CardUpdate, NoUpdate, DayUpdate, ResultsUpdate, ShopUpdate, MapUpdate, OptUpdate, ChooseUpdate, SlotsUpdate, SplashUpdate, TrofUpdate, SecretUpdate, SenhaUpdate
+    .word TitleUpdate, IntroUpdate, CardUpdate, NoUpdate, DayUpdate, ResultsUpdate, ShopUpdate, MapUpdate, OptUpdate, ChooseUpdate, SlotsUpdate, SplashUpdate, TrofUpdate, SecretUpdate, SenhaUpdate, AbUpdate
 
 ; tela do password (banco 28)
 SenhaInit:
@@ -13,6 +13,12 @@ SenhaInit:
     rts
 SenhaUpdate:
     jsl SenhaUpdateL
+    rts
+AbInit:
+    jsl AbInitL
+    rts
+AbUpdate:
+    jsl AbUpdateL
     rts
 
 NoUpdate:

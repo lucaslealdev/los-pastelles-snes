@@ -303,3 +303,10 @@ ft_code:    .res 1      ; glifo esperado ali (se mudar, a pilula some)
 ft_x0:      .res 1
 ft_x1:      .res 1      ; x da peca da direita
 ft_y:       .res 1
+; abertura "RAMON" (banco28.s)
+ab_on:      .res 1      ; 1 = a NMI aplica a rolagem e as camadas da abertura
+ab_t:       .res 2      ; quadros desde o inicio
+ab_pal:     .res 1      ; proxima paleta da tabela (AbPalQ)
+ab_h:       .res 2      ; rolagem da cortina (BG1)
+ab_v:       .res 2
+ab_fx:      .res 2      ; entrada do mapa da faisca neste quadro

@@ -226,7 +226,7 @@ FastReset:
     stz bright
     lda #$FF
     sta next_state
-    lda #ST_SPLASH
+    lda #ST_ABERTURA
     sta next_state
     jsr UiOff
     lda #$81                ; NMI + leitura automatica do controle
@@ -374,6 +374,10 @@ NmiFast:
     bra @dimd
 @nodim:
     jsr UiNmi
+    lda ab_on               ; abertura RAMON: rolagem da cortina e camadas
+    beq :+
+    jsl AbNmi
+:
     lda anim_vis            ; animacao grande do expediente (BG2)
     beq @dimd
     jsl AnimNmi
@@ -1010,6 +1014,16 @@ IconGfx_end:
 IconPal:    .incbin "gen/icon_pal.bin"
 .include "gen/icon_pal.inc"
 .include "gen/voz.inc"         ; tabelas das vozes (acesso longo, f:)
+.segment "BANK13"
+; abertura RAMON (gerador/abertura.js)
+AbTiles:    .incbin "gen/abertura_tiles.bin"
+AbTiles_end:
+AbBg1:      .incbin "gen/abertura_bg1.bin"
+AbBg2:      .incbin "gen/abertura_bg2.bin"
+AbPal:      .incbin "gen/abertura_pal.bin"
+AbObjTiles: .incbin "gen/abertura_obj.bin"   ; perna do R (sprites)
+AbObjTiles_end:
+.include "gen/abertura.inc"
 .segment "BANK11"
 .include "gen/cards.inc"
 .include "gen/ajuda.inc"       ; textos da ajuda da pausa (acesso longo, f:)
