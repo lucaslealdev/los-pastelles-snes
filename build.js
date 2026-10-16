@@ -381,9 +381,15 @@ w('cards.inc', cards.join('\n') + '\n');
   aj.push('AjPagDes: .byte ' + pags.map((p) => (p.desenho ? 1 : 0)).join(', '));
   w('ajuda.inc', aj.join('\n') + '\n');
 }
+// password (gerador/senha.js): tabela de campos e alfabeto, lidos no banco 28
+{
+  const SE = require('./gerador/senha');
+  w('senha.inc', SE.inc(F.CODE));
+  console.log(`password: ${SE.TOTAL / 5} simbolos (${SE.BITS_CAMPOS} bits de campos)`);
+}
 data.push('MissionTxt:\n' + Array.from({ length: 15 }, (_, i) => `  .word TXT_MIS_${i}`).join('\n'));
-data.push('ShopName:\n' + Array.from({ length: 20 }, (_, i) => `  .word TXT_S_${i}`).join('\n'));
-data.push('ShopDesc:\n' + Array.from({ length: 20 }, (_, i) => `  .word TXT_SD_${i}`).join('\n'));
+data.push('ShopName:\n' + Array.from({ length: 21 }, (_, i) => `  .word TXT_S_${i}`).join('\n'));
+data.push('ShopDesc:\n' + Array.from({ length: 21 }, (_, i) => `  .word TXT_SD_${i}`).join('\n'));
 data.push('TrophyTxt:\n' + Array.from({ length: 16 }, (_, i) => `  .word TXT_TROF_${i}`).join('\n'));
 // musica
 music.songs.forEach((s) => s.tracks.forEach((t, c) => data.push(`MUS_${s.name}_${c}:\n${byteLines(t)}`)));

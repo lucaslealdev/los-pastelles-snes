@@ -38,7 +38,10 @@ LoadOptions:
 SaveOptions:
     .a8
     .i16
-    lda #'O'
+    lda tem_sram            ; sem SRAM as opcoes valem so ate desligar
+    bne :+
+    rts
+:   lda #'O'
     sta f:OPT_SRAM
     lda #'P'
     sta f:OPT_SRAM+1
@@ -787,17 +790,27 @@ SlotsDraw:
     lda sl_mode
     bne :+
     PRINT TXT_SL_NOVO, 3, 17, 7
-    bra :+++
+    bra @conf
 :   cmp #2
     bne :+
     PRINT TXT_SL_SEC, 3, 17, 5
-    bra :++
+    bra @conf
+:   cmp #3
+    bne :+
+    PRINT TXT_SL_SENHA, 3, 17, 5
+    bra @conf
 :   PRINT TXT_SL_CONT, 3, 17, 7
-:   lda sl_conf
+@conf:
+    lda sl_conf
     beq @aj
     cmp #1
+    bne :++
+    lda sl_mode
+    cmp #3
     bne :+
-    PRINT TXT_SL_CONF, 3, 20, 5
+    PRINT TXT_SL_CONF3, 3, 20, 5
+    bra @aj
+:   PRINT TXT_SL_CONF, 3, 20, 5
     bra @aj
 :   PRINT TXT_SL_VAZ2, 3, 20, 5
 @aj:
@@ -848,6 +861,8 @@ SlotsUpdate:
 @a:
     lda sl_mode
     beq @novo
+    cmp #3
+    beq @senha
     cmp #2
     bne @cont
     lda menu_sel
@@ -891,6 +906,26 @@ SlotsUpdate:
     sta sl_conf
     SFX SFX_ALARME
     jmp SlotsDraw
+@senha:
+    ; jogo do password (ja na RAM): escolher onde salvar e seguir para o dia
+    lda menu_sel
+    jsr HasSaveSlot
+    bcc @grava
+    lda sl_conf
+    cmp #1
+    beq @grava
+    lda #1
+    sta sl_conf
+    SFX SFX_ALARME
+    jmp SlotsDraw
+@grava:
+    lda menu_sel
+    sta save_slot
+    jsr SaveGame
+    SFX SFX_OK
+    lda #ST_PREDAY
+    sta next_state
+    rts
 @cria:
     lda menu_sel
     sta save_slot

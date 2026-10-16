@@ -31,7 +31,8 @@ ICO_VOLTAR = 18
 ICO_NOVO   = 20
 ICO_CONT   = 21
 ICO_OPC    = 22
-ICO_DIF    = 23
+ICO_DIF    = 1                ; dificuldade: frigideira (o calor da cozinha)
+ICO_SENHA  = 23               ; password: cadeado com chave
 
 ; ---------------------------------------------------------------- cenas
 ; chamada pelas cenas de painel: degrade, faixa desligada e animacao de abertura

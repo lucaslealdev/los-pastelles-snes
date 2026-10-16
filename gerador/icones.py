@@ -38,7 +38,7 @@ ICONES = [
     '2728',   # 20 novo jogo: brilhos
     '1f4be',  # 21 continuar: disquete
     '2699',   # 22 opcoes: engrenagem
-    '1f525',  # 23 dificuldade: fogo
+    '1f510',  # 23 password: cadeado com chave (a dificuldade usa a frigideira, 1)
 ]
 # tela de fim do dia (src/banco28.s, ICR_*): carregada por cima da folha acima
 ICONES_RES = [

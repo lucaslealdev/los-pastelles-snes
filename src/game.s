@@ -16,6 +16,7 @@ ST_SLOTS   = 10
 ST_SPLASH  = 11
 ST_TROF    = 12
 ST_SECRET  = 13
+ST_SENHA   = 14
 
 CUST_Y     = 74
 BUBBLE_Y   = 54

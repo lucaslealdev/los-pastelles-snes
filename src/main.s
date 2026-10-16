@@ -179,6 +179,7 @@ FastReset:
     jsr ClearVram
     jsr ApuUpload
     jsr AudioInit
+    jsl SramDetecta         ; (banco 28) o cartucho tem SRAM?
     jsr LoadOptions
     A16
     lda #$ACE1

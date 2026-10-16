@@ -4,7 +4,7 @@ SHOT_EVERY = nil
 local mapdone = false
 trofdone = false
 -- abas da loja: itens na ordem da tela (repete ShopOrd em src/telas.s)
-SHOP_ABAS = { {0, 3, 15, 19, 18}, {1, 2, 10, 11, 12, 14}, {4, 9, 13, 8}, {5, 6, 7, 16, 17} }
+SHOP_ABAS = { {0, 3, 15, 20, 19, 18}, {1, 2, 10, 11, 12, 14}, {4, 9, 13, 8}, {5, 6, 7, 16, 17} }
 -- botao para levar o cursor da loja ate o item alvo (nil = ja esta nele)
 function SHOP_IR(r8, alvo)
   local aba, pos = r8("shop_aba") + 1, r8("shop_pos") + 1

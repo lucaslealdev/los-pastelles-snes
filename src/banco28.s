@@ -1693,3 +1693,834 @@ AnimBorda: .incbin "gen/anim_borda.bin"
 AnimMapa:  .incbin "gen/anim_map.bin"
 AnimPal:   .incbin "gen/anim_pal.bin"
 .include "gen/anim.inc"
+
+; ---------------------------------------------------------------- password
+; Salvar sem SRAM (gerador/senha.js): 160 bits = 32 simbolos de 5 bits.
+; bits 0..2 versao, 3..148 campos (tabela SenhaCampos: cada campo com teto e
+; piso, so com os bits do seu intervalo), 149..159 verificacao (CRC-16 CCITT
+; dos 20 bytes com esses bits zerados, 11 bits) XOR chave. Os bits 0..148 sao
+; embaralhados por um LFSR semeado pela verificacao.
+.include "gen/senha.inc"
+
+SRAM_TESTE = $7007FE        ; 2 ultimos bytes da SRAM de 2 KB (sem uso nos saves)
+
+; no boot: grava $55 e $AA em dois enderecos e so depois rele os dois. Sem SRAM
+; o barramento aberto devolve o ultimo valor que passou por ele (o $AA gravado
+; ou um byte da instrucao), entao o primeiro nunca volta $55. Os bytes originais
+; sao devolvidos. tem_sram = 1 se a SRAM respondeu
+SramDetecta:
+    .a8
+    .i16
+    stz tem_sram
+    lda f:SRAM_TESTE
+    pha
+    lda f:SRAM_TESTE+1
+    pha
+    lda #$55
+    sta f:SRAM_TESTE
+    lda #$AA
+    sta f:SRAM_TESTE+1
+    lda f:SRAM_TESTE
+    cmp #$55
+    bne @nao
+    lda f:SRAM_TESTE+1
+    cmp #$AA
+    bne @nao
+    lda #$AA                ; troca os dois e confere de novo
+    sta f:SRAM_TESTE
+    lda #$55
+    sta f:SRAM_TESTE+1
+    lda f:SRAM_TESTE
+    cmp #$AA
+    bne @nao
+    inc tem_sram
+@nao:
+    pla
+    sta f:SRAM_TESTE+1
+    pla
+    sta f:SRAM_TESTE
+    rtl
+
+PwMascTab: .byte $80, $40, $20, $10, $08, $04, $02, $01
+
+; pw_pos -> Y = byte em pw_buf, A = mascara do bit
+PwMasc:
+    .a8
+    .i16
+    A16
+    lda pw_pos
+    lsr a
+    lsr a
+    lsr a
+    tay
+    lda pw_pos
+    and #$0007
+    tax
+    A8
+    lda f:PwMascTab,x
+    rts
+
+; escreve os pw_n bits de baixo de pw_v (o mais alto primeiro) em pw_pos
+; (pw_buf ja zerado: so liga bits)
+PwPoe:
+    .a8
+    .i16
+    lda #32
+    sec
+    sbc pw_n
+    beq @pronto
+    sta tmp
+@al:
+    A16
+    asl pw_v
+    rol pw_v+2
+    A8
+    dec tmp
+    bne @al
+@pronto:
+    lda pw_n
+    beq @fim
+    sta tmp
+@b: A16
+    asl pw_v
+    rol pw_v+2
+    A8
+    bcc @zero
+    jsr PwMasc
+    ora pw_buf,y
+    sta pw_buf,y
+@zero:
+    A16
+    inc pw_pos
+    A8
+    dec tmp
+    bne @b
+@fim:
+    rts
+
+; le pw_n bits de pw_pos para pw_v
+PwTira:
+    .a8
+    .i16
+    A16
+    stz pw_v
+    stz pw_v+2
+    A8
+    lda pw_n
+    beq @fim
+    sta tmp
+@b: jsr PwMasc
+    and pw_buf,y
+    cmp #1                  ; carry = bit
+    A16
+    rol pw_v
+    rol pw_v+2
+    inc pw_pos
+    A8
+    dec tmp
+    bne @b
+@fim:
+    rts
+
+; CRC-16 CCITT dos 20 bytes de pw_buf -> pw_crc
+PwCrc:
+    .a8
+    .i16
+    A16
+    lda #$FFFF
+    sta pw_crc
+    A8
+    ldx #0
+@b: lda pw_buf,x
+    eor pw_crc+1
+    sta pw_crc+1
+    ldy #8
+@bit:
+    A16
+    asl pw_crc
+    bcc :+
+    lda pw_crc
+    eor #$1021
+    sta pw_crc
+:   A8
+    dey
+    bne @bit
+    inx
+    cpx #20
+    bne @b
+    rts
+
+; XOR dos bits 0..148 com o LFSR semeado por pw_ver (a mesma rotina embaralha e
+; desembaralha)
+PwEmbaralha:
+    .a8
+    .i16
+    A16
+    lda pw_ver
+    eor #SENHA_CHAVE_LFSR
+    ora #$0001
+    sta pw_lfsr
+    A8
+    ldx #0
+@b: ldy #8
+@s: A16
+    lda pw_lfsr
+    lsr a
+    bcc :+
+    eor #$B400
+:   sta pw_lfsr
+    A8
+    rol tmp
+    dey
+    bne @s
+    lda tmp
+    cpx #18
+    bne :+
+    and #$F8                ; bits 149..151 sao da verificacao
+:   eor pw_buf,x
+    sta pw_buf,x
+    inx
+    cpx #19
+    bne @b
+    rts
+
+PwZera:
+    .a8
+    .i16
+    ldx #0
+:   stz pw_buf,x
+    inx
+    cpx #20
+    bne :-
+    ldx #0
+    stx pw_pos
+    rts
+
+; X = deslocamento na tabela: pw_adr, pw_tam, pw_n, pw_min, pw_max
+PwMeta:
+    .a8
+    .i16
+    A16
+    lda f:SenhaCampos,x
+    sta pw_adr
+    lda f:SenhaCampos+4,x
+    sta pw_min
+    lda f:SenhaCampos+6,x
+    sta pw_min+2
+    lda f:SenhaCampos+8,x
+    sta pw_max
+    lda f:SenhaCampos+10,x
+    sta pw_max+2
+    lda f:SenhaCampos+2,x
+    and #$00FF
+    sta pw_tam
+    A8
+    lda f:SenhaCampos+3,x
+    sta pw_n
+    rts
+
+; carry = 1 se pw_v > pw_max
+PwAcimaMax:
+    .a8
+    .i16
+    A16
+    lda pw_max+2
+    cmp pw_v+2
+    bne :+
+    lda pw_max
+    cmp pw_v
+:   A8
+    rol a                   ; carry = max >= v
+    eor #1
+    lsr a
+    rts
+
+; RAM -> pw_sym (jogo atual -> password)
+SenhaGera:
+    .a8
+    .i16
+    lda s_trof
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    and #$07
+    sta pw_trof
+    lda s_tflags
+    and #$0F
+    sta pw_tflags
+    jsr PwZera
+    A16
+    lda #SENHA_VERSAO
+    sta pw_v
+    stz pw_v+2
+    A8
+    lda #SENHA_BITS_VERSAO
+    sta pw_n
+    jsr PwPoe
+    ldx #0
+@c: phx
+    jsr PwMeta
+    ; valor do campo (1, 2 ou 4 bytes)
+    A16
+    stz pw_v
+    stz pw_v+2
+    A8
+    ldy pw_adr
+    ldx #0
+:   lda a:0,y
+    sta pw_v,x
+    iny
+    inx
+    cpx pw_tam
+    bne :-
+    ; teto e piso, depois tira o piso
+    jsr PwAcimaMax
+    bcc :+
+    A16
+    lda pw_max
+    sta pw_v
+    lda pw_max+2
+    sta pw_v+2
+    A8
+:   A16
+    lda pw_v+2
+    cmp pw_min+2
+    bne :+
+    lda pw_v
+    cmp pw_min
+:   bcs :+
+    lda pw_min
+    sta pw_v
+    lda pw_min+2
+    sta pw_v+2
+:   sec
+    lda pw_v
+    sbc pw_min
+    sta pw_v
+    lda pw_v+2
+    sbc pw_min+2
+    sta pw_v+2
+    A8
+    jsr PwPoe
+    A16
+    pla
+    clc
+    adc #12
+    tax
+    A8
+    cpx #(SENHA_CAMPOS*12)
+    bne @c
+    ; verificacao, embaralha e grava a verificacao com a chave
+    jsr PwCrc
+    A16
+    lda pw_crc
+    and #$07FF
+    sta pw_ver
+    A8
+    jsr PwEmbaralha
+    A16
+    lda pw_ver
+    eor #SENHA_CHAVE_VER
+    and #$07FF
+    sta pw_v
+    stz pw_v+2
+    lda #SENHA_POS_VER
+    sta pw_pos
+    A8
+    lda #SENHA_BITS_VER
+    sta pw_n
+    jsr PwPoe
+    ; 5 bits por simbolo
+    ldx #0
+    stx pw_pos
+@s: phx
+    lda #5
+    sta pw_n
+    jsr PwTira
+    plx
+    lda pw_v
+    sta pw_sym,x
+    inx
+    cpx #SENHA_N
+    bne @s
+    rtl
+
+; pw_sym -> RAM. carry = 1 se o password e valido (so entao grava o jogo)
+SenhaLe:
+    .a8
+    .i16
+    jsr PwZera
+    ldx #0
+@s: phx
+    lda pw_sym,x
+    sta pw_v
+    stz pw_v+1
+    A16
+    stz pw_v+2
+    A8
+    lda #5
+    sta pw_n
+    jsr PwPoe
+    plx
+    inx
+    cpx #SENHA_N
+    bne @s
+    ; verificacao (tira a chave) e zera os bits dela antes do CRC
+    A16
+    lda #SENHA_POS_VER
+    sta pw_pos
+    A8
+    lda #SENHA_BITS_VER
+    sta pw_n
+    jsr PwTira
+    A16
+    lda pw_v
+    eor #SENHA_CHAVE_VER
+    and #$07FF
+    sta pw_ver
+    A8
+    lda pw_buf+18
+    and #$F8
+    sta pw_buf+18
+    stz pw_buf+19
+    jsr PwEmbaralha
+    jsr PwCrc
+    A16
+    lda pw_crc
+    and #$07FF
+    cmp pw_ver
+    A8
+    bne @inv
+    ; versao
+    ldx #0
+    stx pw_pos
+    lda #SENHA_BITS_VERSAO
+    sta pw_n
+    jsr PwTira
+    lda pw_v
+    cmp #SENHA_VERSAO
+    bne @inv
+    ; 1a passada so confere as faixas; a 2a grava
+    stz pw_pass
+    jsr PwCampos
+    bcc @inv
+    inc pw_pass
+    jsr PwCampos
+    ; o que nao vai no password
+    lda #'L'
+    sta s_magic
+    lda #'P'
+    sta s_magic+1
+    lda #'S'
+    sta s_magic+2
+    lda #'T'
+    sta s_magic+3
+    A16
+    lda pw_trof
+    and #$0007
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    sta s_trof
+    A8
+    lda pw_tflags
+    sta s_tflags
+    stz hist_n
+    stz menu_sel
+    stz d_total             ; (TC5 olha o dia: nao vale aqui)
+    FAR0 TrophyCheck        ; refaz os trofeus que dependem so do estado
+    ldx #0
+    stx r_newtrof
+    sec
+    rtl
+@inv:
+    clc
+    rtl
+
+; campos: pw_pass = 0 confere, 1 grava. carry = 1 se todos estao na faixa
+PwCampos:
+    .a8
+    .i16
+    ldx #SENHA_BITS_VERSAO
+    stx pw_pos
+    ldx #0
+@c: phx
+    jsr PwMeta
+    jsr PwTira
+    A16
+    clc
+    lda pw_v
+    adc pw_min
+    sta pw_v
+    lda pw_v+2
+    adc pw_min+2
+    sta pw_v+2
+    A8
+    jsr PwAcimaMax
+    bcc :+
+    plx
+    clc
+    rts
+:   lda pw_pass
+    beq @nx
+    ldy pw_adr
+    ldx #0
+:   lda pw_v,x
+    sta a:0,y
+    iny
+    inx
+    cpx pw_tam
+    bne :-
+@nx:
+    A16
+    pla
+    clc
+    adc #12
+    tax
+    A8
+    cpx #(SENHA_CAMPOS*12)
+    bne @c
+    sec
+    rts
+
+; ---------------------------------------------------------------- tela do password
+; senha_modo 0: digitar (do titulo). Teclado 8x4 com o alfabeto; {A} digita,
+; {B} apaga (vazio: volta ao titulo), START confere. Valido: com SRAM escolhe
+; onde salvar (ST_SLOTS, sl_mode 3); sem SRAM vai direto para o dia.
+; senha_modo 1/2: mostra o password do jogo atual (1 volta a loja, 2 ao titulo).
+PW_LIN   = 7                ; 1a linha do password (a 2a fica 2 abaixo)
+PW_COL   = 6                ; 4 blocos de 4 + 3 espacos = 19 colunas
+PW_TECL0 = 12               ; 1a linha do teclado (a cada 2)
+PW_TECC0 = 5                ; 1a coluna do teclado (a cada 3)
+PW_LINMSG = 21
+
+SenhaInitL:
+    .a8
+    .i16
+    FAR0 FadeOut
+    FAR0 ScreenOff
+    FAR0 LoadMenuScene
+    FAR0 OamClear
+    lda senha_modo
+    bne @mostra
+    stz pw_cur
+    stz pw_tecla
+    stz pw_msg
+    bra @d
+@mostra:
+    jsl SenhaGera
+    lda #SENHA_N
+    sta pw_cur
+@d: jsr SenhaDesenha
+    FAR0 ScreenOn
+    FAR0 FadeIn
+    rtl
+
+SenhaDesenha:
+    .a8
+    .i16
+    FAR0 ClearBg3
+    lda senha_modo
+    beq @dig
+    PRINT0 TXT_PW_TIT_M, 3, 3, 5
+    PRINT0 TXT_PW_INFO, 3, 13, 4
+    jsr SenhaLinhas
+    lda senha_modo
+    cmp #2
+    ldx #TXT_PW_AJ_M
+    bcc :+
+    ldx #TXT_PW_AJ_S
+:   lda #26
+    FAR0 Footer
+    rts
+@dig:
+    PRINT0 TXT_PW_TIT_D, 3, 3, 5
+    PRINT0 TXT_PW_START, 8, 24, 7
+    jsr SenhaLinhas
+    jsr SenhaTeclado
+    lda pw_msg
+    beq :+
+    PRINT0 TXT_PW_INV, 3, PW_LINMSG, 5
+:   ldx #TXT_PW_AJ_D
+    lda #26
+    FAR0 Footer
+    rts
+
+; as 2 linhas do password (digitando: '-' no que falta e o cursor piscando)
+SenhaLinhas:
+    .a8
+    .i16
+    ldx #0                  ; simbolo
+    ldy #0                  ; posicao no texto
+@l: txa
+    cmp pw_cur
+    bcc @tem
+    bne @traco
+    lda frame
+    and #$10
+    beq @traco
+    lda #SENHA_BLOCO
+    bra @poe
+@traco:
+    lda #SENHA_TRACO
+    bra @poe
+@tem:
+    phx
+    lda pw_sym,x
+    A16
+    and #$001F
+    tax
+    A8
+    lda f:SenhaAlfa,x
+    plx
+@poe:
+    sta pw_str,y
+    iny
+    inx
+    cpx #SENHA_N
+    beq @fim
+    txa
+    and #$03
+    bne @l
+    txa
+    cmp #16
+    bne :+
+    lda #$FE                ; meio: duas linhas abaixo
+    sta pw_str,y
+    iny
+    sta pw_str,y
+    iny
+    bra @l
+:   lda #FONT_SPACE
+    sta pw_str,y
+    iny
+    bra @l
+@fim:
+    lda #$FF
+    sta pw_str,y
+    ldx #(PW_LIN*32+PW_COL)
+    stx txt_pos
+    lda #((5<<2)|$20)
+    sta txt_attr
+    ldx #pw_str
+    FAR0 PrintStr
+    rts
+
+; teclado: a tecla escolhida em vermelho, com a faixa pulsante na linha dela
+SenhaTeclado:
+    .a8
+    .i16
+    lda #0
+@k: pha
+    ; posicao: linha PW_TECL0 + 2*(k/8), coluna PW_TECC0 + 3*(k%8)
+    lsr a
+    lsr a
+    and #$FE
+    clc
+    adc #PW_TECL0
+    A16
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    sta txt_pos
+    lda 1,s
+    and #$0007
+    sta pw_ch
+    asl a
+    clc
+    adc pw_ch
+    clc
+    adc #PW_TECC0
+    clc
+    adc txt_pos
+    sta txt_pos
+    lda 1,s
+    and #$001F
+    tax
+    A8
+    lda f:SenhaAlfa,x
+    sta pw_ch
+    lda #$FF
+    sta pw_ch+1
+    ldy #((4<<2)|$20)
+    lda 1,s
+    cmp pw_tecla
+    bne :+
+    ldy #((5<<2)|$20)
+:   sty txt_attr
+    ldx #pw_ch
+    FAR0 PrintStr
+    pla
+    inc a
+    cmp #32
+    bne @k
+    ; faixa: 16 linhas centradas na linha da tecla
+    lda pw_tecla
+    lsr a
+    lsr a
+    and #$FE
+    clc
+    adc #PW_TECL0
+    asl a
+    asl a
+    asl a
+    sec
+    sbc #4
+    sta hl_y
+    lda #16
+    sta hl_h
+    rts
+
+SenhaUpdateL:
+    .a8
+    .i16
+    lda senha_modo
+    beq @dig
+    lda pad_new
+    and #KL_A
+    bne @sai
+    lda pad_new+1
+    and #(KH_B|KH_START)
+    bne @sai
+    rtl
+@sai:
+    lda #SFX_CURSOR
+    FAR0 PlaySfx
+    lda senha_modo
+    cmp #2
+    lda #ST_SHOP
+    bcc :+
+    lda #ST_TITLE
+:   sta next_state
+    rtl
+@dig:
+    lda frame               ; cursor piscando
+    and #$0F
+    bne :+
+    jsr SenhaLinhas
+:   ; cruz: anda no teclado (da a volta nas bordas)
+    lda pad_new+1
+    and #KH_LEFT
+    beq @nl
+    lda pw_tecla
+    and #$07
+    bne :+
+    lda pw_tecla
+    clc
+    adc #8
+    bra :++
+:   lda pw_tecla
+:   dec a
+    bra @tecla
+@nl:
+    lda pad_new+1
+    and #KH_RIGHT
+    beq @nr
+    lda pw_tecla
+    inc a
+    bit #$07
+    bne @tecla
+    sec
+    sbc #8
+    bra @tecla
+@nr:
+    lda pad_new+1
+    and #KH_UP
+    beq @nu
+    lda pw_tecla
+    sec
+    sbc #8
+    and #$1F
+    bra @tecla
+@nu:
+    lda pad_new+1
+    and #KH_DOWN
+    beq @nd
+    lda pw_tecla
+    clc
+    adc #8
+    and #$1F
+@tecla:
+    sta pw_tecla
+    lda #SFX_CURSOR
+    FAR0 PlaySfx
+    jsr SenhaTeclado
+    rtl
+@nd:
+    lda pad_new
+    and #KL_A
+    beq @na
+    lda pw_cur
+    cmp #SENHA_N
+    bcc :+
+    jmp @erro
+:   A16
+    and #$00FF
+    tax
+    A8
+    lda pw_tecla
+    sta pw_sym,x
+    inc pw_cur
+    lda #SFX_CURSOR
+    FAR0 PlaySfx
+    bra @redes
+@na:
+    lda pad_new+1
+    and #KH_B
+    beq @nb
+    lda pw_cur
+    bne :+
+    lda #SFX_CURSOR         ; nada digitado: volta ao titulo
+    FAR0 PlaySfx
+    lda #ST_TITLE
+    sta next_state
+    rtl
+:   dec pw_cur
+    lda #SFX_CURSOR
+    FAR0 PlaySfx
+    bra @redes
+@nb:
+    lda pad_new+1
+    and #KH_START
+    beq @r
+    lda pw_cur
+    cmp #SENHA_N
+    bcs :+
+    jmp @erro
+:   jsl SenhaLe
+    bcc @inv
+    lda #SFX_OK
+    FAR0 PlaySfx
+    lda tem_sram
+    beq :+
+    lda #3                  ; com SRAM: escolher onde salvar
+    sta sl_mode
+    lda #ST_SLOTS
+    sta next_state
+    rtl
+:   lda #ST_PREDAY
+    sta next_state
+    rtl
+@inv:
+    lda #1
+    sta pw_msg
+@erro:
+    lda #SFX_ERRO
+    FAR0 PlaySfx
+    jsr SenhaDesenha
+    rtl
+@redes:
+    lda pw_msg
+    beq :+
+    stz pw_msg
+    jsr SenhaDesenha
+    rtl
+:   jsr SenhaLinhas
+@r: rtl

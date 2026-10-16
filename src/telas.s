@@ -3,9 +3,17 @@
 ; =====================================================================
 
 StateInit:
-    .word TitleInit, IntroInit, CardInit, PreDayInit, DayInit, ResultsInit, ShopInit, MapInit, OptInit, ChooseInit, SlotsInit, SplashInit, TrofInit, SecretInit
+    .word TitleInit, IntroInit, CardInit, PreDayInit, DayInit, ResultsInit, ShopInit, MapInit, OptInit, ChooseInit, SlotsInit, SplashInit, TrofInit, SecretInit, SenhaInit
 StateUpdate:
-    .word TitleUpdate, IntroUpdate, CardUpdate, NoUpdate, DayUpdate, ResultsUpdate, ShopUpdate, MapUpdate, OptUpdate, ChooseUpdate, SlotsUpdate, SplashUpdate, TrofUpdate, SecretUpdate
+    .word TitleUpdate, IntroUpdate, CardUpdate, NoUpdate, DayUpdate, ResultsUpdate, ShopUpdate, MapUpdate, OptUpdate, ChooseUpdate, SlotsUpdate, SplashUpdate, TrofUpdate, SecretUpdate, SenhaUpdate
+
+; tela do password (banco 28)
+SenhaInit:
+    jsl SenhaInitL
+    rts
+SenhaUpdate:
+    jsl SenhaUpdateL
+    rts
 
 NoUpdate:
     .a8
@@ -120,23 +128,56 @@ TIT_COL  = 14               ; coluna do texto (o icone fica a esquerda)
 TitleMenu:
     .a8
     .i16
-    PRINT TXT_TIT_SUB, 6, 18, 5
-    PRINT TXT_TIT_AJ, 10, 26, 7
-    ; itens: 0 novo jogo, 1 continuar (se houver save), 2 opcoes
-    lda #0
-    ldx #TXT_TIT_NOVO
-    jsr TitItem
+    ; itens: novo jogo, continuar (se houver save), password, opcoes. Com os 4 o
+    ; subtitulo sai e a lista sobe 2 linhas (o cartao nao tem mais espaco)
+    lda #TIT_LIN
+    sta tit_lin
     lda title_has_save
     beq :+
-    lda #1
-    ldx #TXT_TIT_CONT
+    lda #(TIT_LIN-2)
+    sta tit_lin
+    bra :++
+:   PRINT TXT_TIT_SUB, 6, 18, 5
+:   PRINT TXT_TIT_AJ, 10, 26, 7
+    stz loop_j
+@l: lda loop_j
+    jsr TitId
+    A16
+    and #$00FF
+    asl a
+    tax
+    lda TitTxt,x
+    tax
+    A8
+    lda loop_j
     jsr TitItem
-    lda #2
-    ldx #TXT_TIT_OPC
-    jmp TitItem
-:   lda #1
-    ldx #TXT_TIT_OPC
-    jmp TitItem
+    inc loop_j
+    jsr TitleCount
+    cmp loop_j
+    bne @l
+    rts
+
+TIT_NOVO  = 0
+TIT_CONT  = 1
+TIT_SENHA = 2
+TIT_OPC   = 3
+TitTxt: .word TXT_TIT_NOVO, TXT_TIT_CONT, TXT_TIT_SENHA, TXT_TIT_OPC
+TitIco: .byte ICO_NOVO, ICO_CONT, ICO_SENHA, ICO_OPC
+
+; A = posicao no menu -> A = item (sem save, CONTINUAR nao aparece)
+TitId:
+    .a8
+    .i16
+    cmp #TIT_CONT
+    bcc @r
+    pha
+    lda title_has_save
+    bne :+
+    pla
+    inc a
+    rts
+:   pla
+@r: rts
 
 ; A = posicao no menu, X = texto
 TitItem:
@@ -144,9 +185,9 @@ TitItem:
     .i16
     sta loop_i
     stx tmp3
-    asl a                   ; linha = TIT_LIN + 2 * posicao
+    asl a                   ; linha = tit_lin + 2 * posicao
     clc
-    adc #TIT_LIN
+    adc tit_lin
     sta loop_i+1
     A16
     and #$00FF
@@ -195,7 +236,7 @@ TitleCount:
     .i16
     lda title_has_save
     clc
-    adc #2
+    adc #3
     rts
 
 TitleUpdate:
@@ -258,18 +299,29 @@ TitleUpdate:
     SFX SFX_OK
     ; traduz posicao -> item
     lda menu_sel
+    jsr TitId
+    cmp #TIT_NOVO
     beq @novo
-    lda title_has_save
-    beq @opc
-    lda menu_sel
-    cmp #1
+    cmp #TIT_CONT
     beq @cont
-@opc:
+    cmp #TIT_SENHA
+    beq @senha
     lda #ST_OPTIONS
     sta next_state
     rts
+@senha:
+    stz senha_modo          ; digitar o password
+    lda #ST_SENHA
+    sta next_state
+    rts
 @novo:
-    stz sl_mode
+    lda tem_sram
+    bne :+
+    jsr NewGame             ; sem SRAM: nao ha onde escolher, comeca direto
+    lda #ST_INTRO
+    sta next_state
+    rts
+:   stz sl_mode
     lda #ST_SLOTS
     sta next_state
     rts
@@ -282,8 +334,6 @@ TitleUpdate:
     rts
 
 ; icones dos itens do menu do titulo (o escolhido balanca)
-TitIcones:  .byte ICO_NOVO, ICO_CONT, ICO_OPC
-TitIcones2: .byte ICO_NOVO, ICO_OPC
 TitleSprites:
     .a8
     .i16
@@ -293,26 +343,24 @@ TitleSprites:
     lda #(TIT_COL*8 - 22)
     sta spr_x
     A8
-    lda loop_j              ; y = (TIT_LIN + 2 * posicao) * 8 - 4
+    lda loop_j              ; y = (tit_lin + 2 * posicao) * 8 - 4
     asl a
     clc
-    adc #TIT_LIN
+    adc tit_lin
     asl a
     asl a
     asl a
     sec
     sbc #4
     sta spr_y
-    A16
     lda loop_j
+    jsr TitId
+    A16
     and #$00FF
     tax
     A8
-    lda TitIcones,x
-    ldy title_has_save
-    bne :+
-    lda TitIcones2,x
-:   pha
+    lda TitIco,x
+    pha
     lda loop_j
     cmp menu_sel
     beq :+
@@ -1462,7 +1510,7 @@ ItemPrice:
     tax
     A8
     jmp (PriceFn,x)
-PriceFn: .word P0, P1, P2, P3, P4, P5, P6, P7, P9, P10, P11, P12, P13, P14, P15, P8, P8, P8, P8, P8
+PriceFn: .word P0, P1, P2, P3, P4, P5, P6, P7, P9, P10, P11, P12, P13, P14, P15, P8, P8, P8, P8, P8, P8
 
 .macro SETP val
     ldx #val
@@ -1905,6 +1953,16 @@ DrawShop:
     lda ShopDesc,x
     tax
     A8
+    lda tem_sram            ; sem SRAM: sair e abrir nao salvam (falam do password)
+    bne @dsc
+    lda menu_sel
+    cmp #SH_MENU
+    bne :+
+    ldx #TXT_SD_18N
+:   cmp #SH_ABRIR
+    bne @dsc
+    ldx #TXT_SD_19N
+@dsc:
     ldy #((SH_LIN0+12)*32+3)
     sty txt_pos
     lda #((7<<2)|$20)
@@ -1934,7 +1992,8 @@ SH_MAPA  = 16
 SH_TROF  = 17
 SH_MENU  = 18               ; voltar ao menu (titulo): salva e sai do jogo
 SH_ABRIR = 19
-SH_N     = 20
+SH_SENHA = 20               ; ver o password
+SH_N     = 21
 SH_ABAS  = 4
 SH_LINABA = 6               ; linha da barra de abas
 SH_LIN0  = 8                ; linha do primeiro item
@@ -1944,11 +2003,11 @@ ShopMsgs: .word TXT_SM_OK, TXT_SM_SEM, TXT_SM_BLOQ, TXT_SM_REP, TXT_SM_MAX, TXT_
 ; abas da loja: itens (indices de ShopName) na ordem em que aparecem.
 ; teste/botcfg.lua (SHOP_ABAS) repete esta tabela
 ShopOrd:
-    .byte 0, 3, SH_PRECO, SH_ABRIR, SH_MENU     ; DIA
+    .byte 0, 3, SH_PRECO, SH_SENHA, SH_ABRIR, SH_MENU   ; DIA
     .byte 1, 2, 10, 11, 12, 14                  ; LOJA
     .byte 4, 9, 13, 8                           ; EQUIPE
     .byte 5, 6, 7, SH_MAPA, SH_TROF             ; REDE
-ShopAbaIni: .byte 0, 5, 11, 15, SH_N            ; inicio de cada aba em ShopOrd (+ fim)
+ShopAbaIni: .byte 0, 6, 12, 16, SH_N            ; inicio de cada aba em ShopOrd (+ fim)
 ShopAbaTxt: .word TXT_SA_0, TXT_SA_1, TXT_SA_2, TXT_SA_3
 ShopAbaCol: .byte 4, 9, 15, 23                 ; colunas na barra (linha SH_LINABA)
 ShopAbaLen: .byte 3, 4, 6, 4
@@ -2046,7 +2105,10 @@ ShopSprite:
     stz loop_j
 @ic:
     jsr ShopItemPos
-    A16
+    cmp #SH_SENHA
+    bne :+
+    lda #ICO_SENHA          ; o icone do item e o do menu (cadeado com chave)
+:   A16
     and #$00FF
     tax
     lda #18
@@ -2205,11 +2267,26 @@ ShopUpdate:
     lda #ST_TROF
     sta next_state
     rts
-:   cmp #SH_MENU
+:   cmp #SH_SENHA
     bne :+
+    SFX SFX_OK
+    lda #1                  ; mostra o password e volta para a loja
+    sta senha_modo
+    lda #ST_SENHA
+    sta next_state
+    rts
+:   cmp #SH_MENU
+    bne :++
     jsr SaveGame            ; salva e volta para a tela de titulo (CONTINUAR retoma)
     SFX SFX_OK
+    lda tem_sram
+    beq :+
     lda #ST_TITLE
+    sta next_state
+    rts
+:   lda #2                  ; sem SRAM: antes mostra o password
+    sta senha_modo
+    lda #ST_SENHA
     sta next_state
     rts
 :   cmp #SH_ABRIR
@@ -2525,7 +2602,10 @@ SlotAddr:
 SaveGame:
     .a8
     .i16
-    jsr SaveSum
+    lda tem_sram            ; cartucho sem SRAM: so o password
+    bne :+
+    rts
+:   jsr SaveSum
     lda save_slot
     jsr SlotAddr
     ldx tmp2
@@ -2560,7 +2640,10 @@ SaveGame:
 SaveTFlags:
     .a8
     .i16
-    ldx tmp2
+    lda tem_sram
+    bne :+
+    rts
+:   ldx tmp2
     phx
     ldx tmp4
     phx
@@ -2579,6 +2662,13 @@ SaveTFlags:
 HasSaveSlot:
     .a8
     .i16
+    pha
+    lda tem_sram            ; sem SRAM nao ha jogo salvo
+    bne :+
+    pla
+    clc
+    rts
+:   pla
     jsr SlotAddr
     ldx tmp2
     lda f:SRAM,x
