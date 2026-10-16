@@ -114,7 +114,10 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
       - Opções de jogo (`OPT_SRAM`) e troféus: decidir se entram no password ou ficam só na SRAM.
       - Código em outro banco (banco 0 cheio). Teste Lua: gerar password, carregar e comparar o bloco do save; testar também o boot sem SRAM.
 
-13. - [ ] **Vozes com taxa maior (mais qualidade).** *(por último: as melhorias acima adicionam CPU por quadro e mudam o orçamento do barramento)*
+13. - [x] **Vozes com taxa maior (mais qualidade).** *(por último: as melhorias acima adicionam CPU por quadro e mudam o orçamento do barramento)*
+      - Feito (falas em stream): 10 → 14 kHz. Medido com `teste/audio_orc.lua` num dia de fim de jogo: antes a lógica deixava só ~40 linhas ociosas (mediana) e a música já ficava sem dados em 17% dos quadros, mesmo a 10 kHz. Agora: o HUD só reimprime números quando mudam, `OamClear`/`AddSprite`/`NumConv` mais leves (mediana 134 linhas, p10 88); driver do SPC700 ecoa antes de avançar o ponteiro (+16% de vazão); a música passa na frente quando está quase vazia. Nenhum quadro com anel vazio, nem de fala nem de música. As falas que não cabem nos bancos 13–27 vão para os bancos 30–31.
+      - Vozes fixas: continuam em 9 kHz. Para 10 kHz faltam ~2,3 KB na memória do SPC700; dá com eco menor (EDL 2 → 1, muda um pouco a reverberação das músicas de chiptune) ou com o anel da música menor (só chega a ~9,6 kHz). Decidir.
+      - Validar no console real: o driver do SPC700 mudou.
       - Objetivo: subir a taxa das vozes gravadas. A música tema (`VOZ_TEMA`, 10 kHz) já está boa; **não mexer nela**.
       - **Falas em stream** (10 kHz, voz 7 / anel B): o limite é o barramento. Hoje o dia tem ~170–180 bytes/quadro de folga, e música + fala usam ~94 + 94. Para subir a fala, liberar tempo de CPU por quadro otimizando o que compete com o `Bomba` (lógica do dia, montagem de OAM, uploads na NMI, `BtnSprites`/`PillSprites`, etc.). Perfilar antes (skill `snes-otimizacao`, Mesen) para achar os maiores consumidores.
       - Outras ideias: aumentar `LOTE_MAX`, acelerar o laço do `Bomba`, dar prioridade maior à fala enquanto toca, ajustar colchões (0,5 s música / 0,15 s fala).
