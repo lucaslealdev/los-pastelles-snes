@@ -329,25 +329,17 @@ PriceTable:  .byte 8, 7, 8, 9, 10, 11
 DrawHudStatic:
     .a8
     .i16
-    PRINT TXT_HUD_DIA, 1, 1, 0
-    PRINT TXT_HUD_RS, 10, 1, 1
-    PRINT TXT_HUD_NV, 21, 1, 0
-    PRINT TXT_HUD_DP, 29, 1, 0
-    PRINT TXT_HUD_EST, 1, 26, 0
-    PRINT TXT_HUD_REP, 14, 26, 0
-    jsr HasGoal
-    bcc :+
-    PRINT TXT_HUD_META, 22, 26, 1
-    PRINT TXT_HUD_BAR, 29, 26, 1
-    PRINTNUM8 d_goal, 30, 26, 1, 2
-:   jmp ShowMission
+    jsl HudFixo             ; banco 28: ':' da hora e a meta do dia
+    jmp ShowMission
 
+; missao na linha de avisos do rodape (espera o aviso da vez acabar)
 ShowMission:
     .a8
     .i16
-    lda #25
+    lda msg_timer
+    bne @r
+    lda #HUD_LIN_MSG
     jsr ClearRow
-    PRINT TXT_HUD_STAR, 1, 25, 1
     A16
     lda s_mission
     and #$00FF
@@ -356,46 +348,20 @@ ShowMission:
     lda MissionTxt,x
     tax
     A8
-    ldy #(25*32+3)
+    ldy #(HUD_LIN_MSG*32+3)
     sty txt_pos
-    lda #((2<<2)|$20)
+    lda #((4<<2)|$20)
     sta txt_attr
-    jmp PrintStr
+    jsr PrintStr
+    lda #1
+    sta hud_mis
+@r: rts
 
 DrawHud:
     .a8
     .i16
-    PRINTNUM16 s_day, 5, 1, 0, 3
-    A16
-    lda s_money
-    sta num
-    lda s_money+2
-    sta num+2
-    A8
-    ldx #(1*32+13)
-    stx txt_pos
-    lda #((1<<2)|$20)
-    sta txt_attr
-    lda #7
-    sta num_w
-    jsr PrintNum
-    PRINTNUM8 s_level, 24, 1, 0, 2
-    PRINTNUM8 d_hour, 27, 1, 0, 2
-    lda #FONT_0
-    sta num_pad
-    PRINTNUM8 d_min, 30, 1, 0, 2
-    PRINTNUM16 s_stock, 9, 26, 0, 3
-    PRINTNUM8 s_rep, 18, 26, 0, 3
-    jsr HasGoal
-    bcc :+
-    lda d_boss
-    cmp #1
-    bne @happy
-    PRINTNUM8 d_perfect, 26, 27, 2, 2
+    jsl HudValores
     rts
-@happy:
-    PRINTNUM8 d_happy, 26, 27, 2, 2
-:   rts
 
 ; ---------------------------------------------------------------- pausa
 ; mesmo balao creme do tutorial (dim_on = 2: TutNmi/TutSprites); um emoji por item
@@ -651,8 +617,9 @@ Tutorial:
     lda frame
     and #$1F
     bne @r
-    lda #2
+    lda #HUD_LIN_MSG
     jsr ClearRow
+    stz hud_mis
     A16
     lda tut_step
     and #$00FF
@@ -661,9 +628,9 @@ Tutorial:
     lda TutTxt,x
     tax
     A8
-    ldy #(2*32+1)
+    ldy #(HUD_LIN_MSG*32+1)
     sty txt_pos
-    lda #((1<<2)|$20)
+    lda #((4<<2)|$20)
     sta txt_attr
     jsr PrintStr
 @r: rts
@@ -781,16 +748,16 @@ HasGoal:
 @y: sec
     rts
 
-; X = texto; mensagem na linha 2 (boa = amarela)
+; X = texto; aviso na linha de avisos do rodape, no lugar da missao (boa = verde)
 ShowMsg:
     .a8
     .i16
-    lda #1
+    lda #6
     bra ShowMsgP
 ShowMsgBad:
     .a8
     .i16
-    lda #3
+    lda #5
 ShowMsgP:
     .a8
     .i16
@@ -799,14 +766,15 @@ ShowMsgP:
     asl a
     ora #$20
     sta txt_attr
-    lda #2
+    lda #HUD_LIN_MSG
     jsr ClearRow
-    ldx #(2*32+1)
+    ldx #(HUD_LIN_MSG*32+1)
     stx txt_pos
     plx
     jsr PrintStr
     lda #150
     sta msg_timer
+    stz hud_mis
     rts
 
 MsgUpdate:
@@ -816,8 +784,7 @@ MsgUpdate:
     beq :+
     dec msg_timer
     bne :+
-    lda #2
-    jsr ClearRow
+    jmp ShowMission         ; o aviso acabou: volta a missao
 :   rts
 
 ; ---------------------------------------------------------------- atualizacao
@@ -1420,17 +1387,18 @@ MiniGame:
     SFX SFX_LIXO
     rts
 
-; linha 2: aviso; linha 3: sequencia isolada (verde = feito, amarelo = atual)
+; aviso do minijogo na linha de avisos do rodape (os botoes sao sprites)
 MiniDraw:
     .a8
     .i16
-    lda #2
+    lda #HUD_LIN_MSG
     jsr ClearRow
+    stz hud_mis
     lda mg_mode
     beq :+
-    PRINT TXT_M_CONSERTE, 1, 2, 3
+    PRINT TXT_M_CONSERTE, 1, HUD_LIN_MSG, 5
     bra :++
-:   PRINT TXT_M_FECHE, 1, 2, 1
+:   PRINT TXT_M_FECHE, 1, HUD_LIN_MSG, 4
 :   stz msg_timer
     rts
 
@@ -2789,6 +2757,7 @@ CursorPos:
 DayDraw:
     .a8
     .i16
+    jsl HudSprites          ; emojis do HUD (na frente dos outros sprites)
     jsr MiniSprites
     ; cursor (balanca)
     jsr CursorPos
@@ -3533,7 +3502,7 @@ DrawCoin:
     ; aproxima 1/4 do caminho por quadro (destino: dinheiro no topo)
     lda coin_y
     sec
-    sbc #2
+    sbc #HUD_ICO_Y
     lsr a
     lsr a
     sta tmp
@@ -3542,7 +3511,7 @@ DrawCoin:
     sbc tmp
     sta coin_y
     A16
-    lda #104
+    lda #HUD_RS_ICOX
     sec
     sbc coin_x
     cmp #$8000

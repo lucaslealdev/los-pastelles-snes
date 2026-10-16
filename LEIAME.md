@@ -17,6 +17,7 @@ Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FX
 
 ## Conteúdo
 - Tela de título com a logo oficial e cores da marca no jogo todo; mascote (pastelzinho piscando) nas cartas, na loja e comemorando cada pastel perfeito.
+- HUD do expediente em balões: no topo dia 📅, dinheiro 🪙, nível ⭐ e hora ⏰; embaixo a missão e os avisos, o estoque 📦, a reputação ❤️ e a meta 🎯 dos desafios.
 - Abertura na rua à noite (o letreiro acende).
 - Tutorial guiado no dia 1: a cada passo (cliente chegou, fechar o pastel, fritadeira, ponto certo, entregar) o jogo para e mostra o que fazer; **A** continua.
 - Minijogo de fechar o pastel (2 a 4 botões conforme o nível) e combos com refrigerante.

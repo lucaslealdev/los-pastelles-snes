@@ -76,7 +76,8 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Antes de desenhar, gerar com o Gemini uma arte conceitual em pixel art 16 bits como referência de composição, cores e estilo; a arte final continua gerada por código em `gerador/`.
      - Atenção à paleta (BG em 4bpp, 15 cores por paleta) e ao tamanho do banco onde o mapa fica.
 
-9. - [ ] **HUD do dia mais moderno.** *(depois do 2, do 7 e do 8)*
+9. - [x] **HUD do dia mais moderno.** *(depois do 2, do 7 e do 8)*
+     - Feito: pílulas creme no topo (📅 dia, 🪙 dinheiro, ⭐ nível, ⏰ hora) e painel creme no rodapé com a linha de avisos/missão (os avisos que ficavam na linha 2 agora aparecem ali no lugar da missão, que volta quando o aviso acaba) e a de números (📦 estoque, ❤️ reputação, 🎯 meta). Layout em `gerador/hud.js`; texto e emojis em `HudValores`/`HudSprites` (`src/banco28.s`). Fotos: `teste/hud.lua`.
      - Trocar a HUD atual por balões (estilo do balão do tutorial / pílula), ícones de emoji (moeda, relógio, estrela etc.) e texto estilizado.
      - Cuidado com o limite de 32 sprites / 34 tiles por linha durante o jogo e com as paletas de sprite 3–7, que são dos clientes. Reservar espaço/sprites para os indicadores dos itens 1 e 2.
 

@@ -55,6 +55,8 @@ d_patrate:  .res 2
 d_speed:    .res 2
 d_xp:       .res 2
 msg_timer:  .res 1
+hud_mis:    .res 1      ; 1 = a linha de avisos do rodape mostra a missao (com a estrela)
+hud_w:      .res 1      ; HudNum: largura do numero
 
 n_flav:     .res 1
 n_fry:      .res 1

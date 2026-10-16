@@ -280,6 +280,16 @@ inc.push(`TUT_VRAM = ${hex4(TUT_TILE * 16)}`);
 inc.push(`SP_VER_COL = ${(32 - [...VERSAO_TXT].length) >> 1}`);
 { const b = A.TUT_BOX; inc.push(`TUT_X0 = ${b.x}`, `TUT_X1 = ${b.x + b.w - 1}`, `TUT_Y0 = ${b.y}`, `TUT_H = ${b.h}`); }
 { const b = A.AJ_BOX; inc.push(`AJ_X0 = ${b.x}`, `AJ_X1 = ${b.x + b.w - 1}`, `AJ_Y0 = ${b.y}`, `AJ_H = ${b.h}`); }
+// HUD do expediente (gerador/hud.js): colunas, larguras, linhas e x dos emojis
+{
+  const H = require('./gerador/hud');
+  inc.push(`HUD_LIN_TOPO = ${H.LIN_TOPO}`, `HUD_LIN_MSG = ${H.LIN_MSG}`, `HUD_LIN_NUM = ${H.LIN_NUM}`, `HUD_ICO_Y = ${H.PILULA.y}`);
+  for (const [k, v] of Object.entries(H.TOPO)) inc.push(`HUD_${k}_COL = ${v[0]}`, `HUD_${k}_W = ${v[1]}`, `HUD_${k}_ICOX = ${H.icoX(v)}`);
+  for (const [k, v] of Object.entries(H.BAIXO)) inc.push(`HUD_${k}_COL = ${v[0]}`, `HUD_${k}_W = ${v[1]}`);
+  // as pilulas nao podem se encostar nem sair da tela
+  const xs = Object.values(H.TOPO).map(H.pilulaX).sort((a, b) => a[0] - b[0]);
+  xs.forEach(([x0, x1], i) => { if (x0 < 0 || x1 > 255 || (i && x0 <= xs[i - 1][1] + 1)) throw new Error('HUD: pilulas do topo se sobrepoem ou saem da tela'); });
+}
 inc.push(`AJ_VRAM = ${hex4(AJ_TILE * 16)}`, `AJ_MAPA_VRAM = ${hex4(AJ_MAPA)}`, `AJ_MAPB_VRAM = ${hex4(AJ_MAPB)}`,
   `AJ_SC_A = ${hex2(AJ_MAPA >> 8)}`, `AJ_SC_B = ${hex2(AJ_MAPB >> 8)}`);
 // niveis (gerador/niveis.js): o codigo usa NV_*; cartas de desbloqueio agrupadas no mesmo nivel
@@ -308,6 +318,8 @@ cabe('PAUSA', T.PAUSA, 25, 1);
 for (const k of ['PA_CONT', 'PA_AJUDA', 'PA_SAIR', 'PA_AVISO']) cabe(k, T[k], 22, 1);
 // missao ao lado do icone no fim do dia (DrawResults: coluna 5 ate 28)
 for (const [k, v] of Object.entries(T)) if (/^MIS_/.test(k)) cabe(k, v, 24, 1);
+// avisos do expediente: linha de avisos do painel do rodape, colunas 1..30
+for (const [k, v] of Object.entries(T)) if (/^(M_|TUT_|DEMO$)/.test(k)) cabe(k, v, 30, 1);
 
 const data = [];
 data.push('; gerado por build.js - nao editar');

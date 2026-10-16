@@ -2,6 +2,7 @@
 'use strict';
 const { Img, sceneToBG, enc4, tilePixels, palBytes } = require('./gfx');
 const { GLYPHS, BOTOES } = require('./fonte');
+const HUD = require('./hud');
 
 // ---------------------------------------------------------------- texto grande nos cenarios
 function drawText(I, s, x, y, col, scale = 1) {
@@ -197,7 +198,25 @@ function shopScene(v = 0, ref = 0) {
   I.rect(7, 192, 8, 3, N);
   // faixa inferior
   I.rect(0, 199, 256, 25, N); I.hline(0, 199, 256, D);
+  hudBaloes(I);
   return I;
+}
+
+// HUD (gerador/hud.js): pilulas creme no topo e painel creme no rodape, no estilo
+// do balao do tutorial (contorno escuro, filete caramelo embaixo); o texto (BG3,
+// paletas 4-7) e os emojis (sprites) ficam por cima
+function hudBaloes(I) {
+  const K = 1, W = 3, B = 8;
+  const { y, h } = HUD.PILULA;
+  for (const k in HUD.TOPO) {
+    const [x0, x1] = HUD.pilulaX(HUD.TOPO[k]), w = x1 - x0 + 1;
+    roundRect(I, x0, y + 1, w, h, 7, K);                          // sombra
+    roundRect(I, x0, y, w, h, 7, K);
+    roundRect(I, x0 + 1, y + 1, w - 2, h - 2, 6, (px, py) => (py >= y + h - 3 ? B : W));
+  }
+  const p = HUD.PAINEL;
+  roundRect(I, p.x, p.y, p.w, p.h, 6, K);
+  roundRect(I, p.x + 1, p.y + 1, p.w - 2, p.h - 2, 5, (px, py) => (py >= p.y + p.h - 3 ? B : W));
 }
 
 // =================================================================== CENARIO: TITULO / NOITE
@@ -776,6 +795,12 @@ function bar(level, fill) {
 
 // Reduz um icone 16x16 para 8x8: cada bloco 2x2 vira a cor mais comum (sem o
 // contorno), e o contorno escuro e refeito em volta. Usado no sabor ao lado da cesta.
+// sprite 8x8 a partir de 8 linhas de digitos hexadecimais (cor da paleta; e = 14)
+function desenho8(linhas) {
+  const o = new Img(8, 8);
+  linhas.forEach((l, y) => [...l].forEach((c, x) => { if (c !== '.') o.set(x, y, parseInt(c, 16)); }));
+  return o;
+}
 function mini(src) {
   const o = new Img(8, 8);
   for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
@@ -830,10 +855,13 @@ function buildSprites(emojis = {}) {
   put('MASCOTE_0', mascote(false), 1); put('MASCOTE_1', mascote(true), 1);
   for (const n of ['cadeado', 'balao', 'cursor', 'raiva', 'coracao', 'moeda', 'xis', 'estrela', 'refri', 'mao']) put(n.toUpperCase(), emo(n, () => icon(n)), 0);
   put('REFRI_P', refriP(), 0);
+  const bola = (c) => () => { const I = new Img(16, 16); I.ell(1, 1, 14, 14, c); I.outline(1); return I; };
+  const quadrado = (c) => () => { const I = new Img(16, 16); I.rect(2, 2, 12, 12, c); I.outline(1); return I; };
+  // HUD: dia e hora (16x16, ponta das pilulas do topo; moeda e estrela ja existem)
+  put('CALENDARIO', emo('calendario', quadrado(9)), 0); put('RELOGIO', emo('relogio', bola(15)), 0);
   // menu de pausa: continuar e sair (sem emoji: triangulo e casinha simples)
   put('PAUSA_CONT', emo('continuar', () => { const I = new Img(16, 16); I.rect(1, 1, 14, 14, 15); for (let j = 0; j < 8; j++) I.rect(5, 4 + j / 2 | 0, 1 + j, 8 - (j & ~1), 2); I.outline(1); return I; }), 0);
   // ajuda (pausa): item da pausa e icones das abas (sem emoji: um circulo de cor)
-  const bola = (c) => () => { const I = new Img(16, 16); I.ell(1, 1, 14, 14, c); I.outline(1); return I; };
   put('PAUSA_AJUDA', emo('ajuda', bola(9)), 0);
   put('AJ_CONTROLE', emo('controle', bola(3)), 0); put('AJ_LIVRO', emo('livro', bola(15)), 0); put('AJ_GRAFICO', emo('grafico', bola(11)), 0);
   put('PAUSA_SAIR', emo('casa', () => { const I = new Img(16, 16); for (let j = 0; j < 6; j++) I.rect(7 - j, 1 + j, 2 + 2 * j, 1, 9); I.rect(3, 7, 10, 7, 14); I.rect(7, 10, 3, 4, 7); I.outline(1); return I; }), 0);
@@ -874,6 +902,12 @@ function buildSprites(emojis = {}) {
     for (let j = 0; j < 8; j++) for (let k = 0; k < 8; k++) { const c = m.get(k, j); if (c) sheet.set(tx * 8 + k, ty * 8 + j, c); }
   });
   ids.MINI = miniBase;
+  // HUD: emojis 8x8 do rodape (reduzidos do emoji); por ultimo, nos buracos que
+  // sobram depois das barras e dos sabores (que pedem tiles seguidos)
+  // (o 📦 reduzido vira um borrao: a caixa de estoque e desenhada a mao)
+  put('MINI_CAIXA', desenho8(['11111111', '166ee661', '177ee771', '11111111', '177ee771', '177ee771', '188ee881', '11111111']), 0);
+  for (const [n, d] of [['coracao', () => icon('coracao')], ['alvo', bola(9)], ['estrela', () => icon('estrela')]])
+    put('MINI_' + n.toUpperCase(), mini(emo(n, d)), 0);
   // tiles 4bpp (cor sem paleta)
   const raw = new Img(128, 256); for (let i = 0; i < raw.p.length; i++) raw.p[i] = sheet.p[i] & 15;
   const tiles = []; for (let t = 0; t < 512; t++) tiles.push(enc4(tilePixels(raw, t % 16, (t / 16) | 0)));

@@ -1149,3 +1149,219 @@ AjudaSprites:
     rtl
 AjIcoX:    .word 54, 98, 142, 186
 AjIcoTile: .word SPR_AJ_CONTROLE, SPR_AJ_LIVRO, SPR_ESTRELA, SPR_AJ_GRAFICO
+
+; ---------------------------------------------------------------- HUD do expediente
+; Pilulas creme no topo (dia, dinheiro, nivel, hora) e painel creme no rodape
+; (linha de avisos/missao e linha de numeros), desenhados no cenario por
+; gerador/hud.js + arte.js. Aqui ficam o texto (BG3, paletas 4-7) e os emojis.
+
+; parte fixa (DrawHudStatic): ':' da hora
+HudFixo:
+    .a8
+    .i16
+    PRINT0 TXT_HUD_DP, HUD_HORA_COL+2, HUD_LIN_TOPO, 4
+    rtl
+
+; numeros (todo quadro, DrawHud)
+.macro HUDNUM8 var, col, lin, pal, larg
+    A16
+    lda var
+    and #$00FF
+    sta num
+    stz num+2
+    A8
+    ldx #((lin)*32+(col))
+    stx txt_pos
+    lda #(((pal)<<2)|$20)
+    sta txt_attr
+    lda #larg
+    jsr HudNum
+.endmacro
+.macro HUDNUM16 var, col, lin, pal, larg
+    A16
+    lda var
+    sta num
+    stz num+2
+    A8
+    ldx #((lin)*32+(col))
+    stx txt_pos
+    lda #(((pal)<<2)|$20)
+    sta txt_attr
+    lda #larg
+    jsr HudNum
+.endmacro
+
+HudValores:
+    .a8
+    .i16
+    HUDNUM16 s_day, HUD_DIA_COL, HUD_LIN_TOPO, 4, HUD_DIA_W
+    A16
+    lda s_money
+    sta num
+    lda s_money+2
+    sta num+2
+    A8
+    ldx #(HUD_LIN_TOPO*32+HUD_RS_COL)
+    stx txt_pos
+    lda #((6<<2)|$20)
+    sta txt_attr
+    lda #HUD_RS_W
+    jsr HudNum
+    HUDNUM8 s_level, HUD_NV_COL, HUD_LIN_TOPO, 5, HUD_NV_W
+    ; hora: hh (com espaco) e mm (com zero)
+    A16
+    lda d_hour
+    and #$00FF
+    sta num
+    stz num+2
+    A8
+    ldx #(HUD_LIN_TOPO*32+HUD_HORA_COL)
+    stx txt_pos
+    lda #((4<<2)|$20)
+    sta txt_attr
+    lda #2
+    sta num_w
+    FAR0 PrintNum
+    A16
+    lda d_min
+    and #$00FF
+    sta num
+    A8
+    ldx #(HUD_LIN_TOPO*32+HUD_HORA_COL+3)
+    stx txt_pos
+    lda #2
+    sta num_w
+    lda #FONT_0
+    sta num_pad
+    FAR0 PrintNum
+    HUDNUM16 s_stock, HUD_EST_COL, HUD_LIN_NUM, 4, HUD_EST_W
+    HUDNUM8 s_rep, HUD_REP_COL, HUD_LIN_NUM, 4, HUD_REP_W
+    ; meta: perfeitos (desafio do sabor) ou satisfeitos, alinhado a direita do '/'
+    FAR0 HasGoal
+    bcc @r
+    lda d_boss
+    cmp #1
+    bne :+
+    lda d_perfect
+    bra :++
+:   lda d_happy
+:   A16
+    and #$00FF
+    sta num
+    stz num+2
+    A8
+    ldx #(HUD_LIN_NUM*32+HUD_META_COL)
+    stx txt_pos
+    lda #((6<<2)|$20)
+    sta txt_attr
+    lda #2
+    sta num_w
+    FAR0 PrintNum
+    PRINT0 TXT_HUD_BAR, HUD_META_COL+2, HUD_LIN_NUM, 6
+    HUDNUM8 d_goal, HUD_META_COL+3, HUD_LIN_NUM, 6, 2
+@r: rtl
+
+; num (32 bits) alinhado a esquerda em txt_pos/txt_attr, completado com espacos
+; ate A casas (apaga os digitos que sobram quando o numero encolhe)
+HudNum:
+    .a8
+    .i16
+    sta hud_w
+    FAR0 NumConv
+    ldx #0
+@z: lda numdig,x            ; pula os zeros a esquerda (fica ao menos um digito)
+    bne @c
+    cpx #7
+    beq @c
+    inx
+    bra @z
+@c: ldy #0
+@cp:
+    lda numdig,x
+    clc
+    adc #FONT_0
+    sta numstr,y
+    iny
+    inx
+    cpx #8
+    bne @cp
+@sp:
+    tya
+    cmp hud_w
+    bcs @fim
+    lda #FONT_SPACE
+    sta numstr,y
+    iny
+    bra @sp
+@fim:
+    lda #$FF
+    sta numstr,y
+    ldx #numstr
+    FAR0 PrintStr
+    rts
+
+; emojis do HUD: 16x16 na ponta de cada pilula do topo; 8x8 no rodape (estoque,
+; reputacao, meta e a estrela da missao)
+HudSprites:
+    .a8
+    .i16
+    lda #$30                ; prioridade 3, paleta 0
+    sta spr_attr
+    lda #1
+    sta spr_size
+    lda #HUD_ICO_Y
+    sta spr_y
+    ldx #0
+@t: phx
+    A16
+    lda f:HudIcoX,x
+    sta spr_x
+    lda f:HudIcoTile,x
+    sta spr_tile
+    A8
+    FAR0 AddSprite
+    plx
+    inx
+    inx
+    cpx #8
+    bne @t
+    stz spr_size
+    lda #(HUD_LIN_NUM*8)
+    sta spr_y
+    A16
+    lda #((HUD_EST_COL-1)*8)
+    sta spr_x
+    lda #SPR_MINI_CAIXA
+    sta spr_tile
+    A8
+    FAR0 AddSprite
+    A16
+    lda #((HUD_REP_COL-1)*8)
+    sta spr_x
+    lda #SPR_MINI_CORACAO
+    sta spr_tile
+    A8
+    FAR0 AddSprite
+    FAR0 HasGoal
+    bcc :+
+    A16
+    lda #((HUD_META_COL-1)*8)
+    sta spr_x
+    lda #SPR_MINI_ALVO
+    sta spr_tile
+    A8
+    FAR0 AddSprite
+:   lda hud_mis
+    beq @r
+    lda #(HUD_LIN_MSG*8)
+    sta spr_y
+    A16
+    lda #8
+    sta spr_x
+    lda #SPR_MINI_ESTRELA
+    sta spr_tile
+    A8
+    FAR0 AddSprite
+@r: rtl
+HudIcoX:    .word HUD_DIA_ICOX, HUD_RS_ICOX, HUD_NV_ICOX, HUD_HORA_ICOX
+HudIcoTile: .word SPR_CALENDARIO, SPR_MOEDA, SPR_ESTRELA, SPR_RELOGIO

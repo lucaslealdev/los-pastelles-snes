@@ -31,6 +31,9 @@ EMOJIS = {
     'mao':      ('1faf4', 0),   # mao com a palma para cima (o que o jogador segura)
     'continuar': ('25b6', 0),   # pausa: continuar (play)
     'casa':     ('1f3e0', 0),   # pausa: sair para o titulo (casa, como na loja)
+    'calendario': ('1f4c5', 0),  # HUD: dia
+    'relogio':  ('23f0', 0),    # HUD: hora
+    'alvo':     ('1f3af', 0),   # HUD: meta do dia (reduzido a 8x8)
     'ajuda':    ('2753', 0),    # pausa: ajuda (interrogacao)
     'controle': ('1f3ae', 0),   # ajuda: aba CONTROLES
     'livro':    ('1f4d8', 0),   # ajuda: aba COMO JOGAR (livro azul)
