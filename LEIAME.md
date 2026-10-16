@@ -2,7 +2,7 @@
 
 Desenvolvido por **Ramon de Oliveira** — loja: [www.lospastelles.com.br](https://www.lospastelles.com.br)
 
-**`LosPastelles.sfc`** é uma ROM real de SNES (LoROM, 1 MB, 2 KB de SRAM com bateria), com vozes e música gravadas.
+**`LosPastelles.sfc`** é uma ROM real de SNES (LoROM, 2 MB, 2 KB de SRAM com bateria), com vozes e música gravadas.
 Funciona em emuladores (Mesen, bsnes, Snes9x) e em cartucho flash (EverDrive, FXPAK etc.).
 
 ## Como jogar
@@ -54,9 +54,9 @@ monta a ROM com o cc65 (em `tools/cc65`).
 - `teste/` — robô em Lua que joga sozinho num Mesen de testes separado (`teste/mesen/Mesen.exe --testrunner LosPastelles.sfc teste/bot.lua`), sem mexer nos seus saves.
 
 ## Gravar no cartucho
-- **Arquivo:** `LosPastelles.sfc` — 1 MB (8 Mbit), mapa **LoROM**, cabeçalho e checksum válidos, região NTSC.
+- **Arquivo:** `LosPastelles.sfc` — 2 MB (16 Mbit), mapa **LoROM**, cabeçalho e checksum válidos, região NTSC.
 - **Placa:** LoROM **com SRAM e bateria** (o jogo usa 2 KB; placas com 8 KB de SRAM também servem). Sem SRAM o jogo roda, mas não salva.
-- **Memória:** ROM/flash de pelo menos 8 Mbit; não precisa de memória rápida (funciona como SlowROM).
+- **Memória:** ROM/flash de pelo menos 16 Mbit; não precisa de memória rápida (funciona como SlowROM).
 - **Teste antes:** se possível rode primeiro num flashcart (FXPAK/EverDrive) ou numa flash regravável.
 - **Etiqueta e manual:** pasta `cartucho/` — `etiqueta_formato_classico.png` (mesmo formato e proporção do modelo de etiqueta frontal), `etiqueta_frente_70x50mm_600dpi.png` (alternativa) e o manual em PDF (A5, 6 páginas). Imprima a etiqueta na medida do modelo do seu cartucho. Para regerar: `python gerador/cartucho.py`.
 

@@ -1,4 +1,4 @@
-// Build da ROM "Los Pastelles: O Imperio do Pastel" (SNES, LoROM SlowROM 1 MB)
+// Build da ROM "Los Pastelles: O Imperio do Pastel" (SNES, LoROM SlowROM 2 MB)
 // Uso: node build.js
 'use strict';
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
@@ -250,52 +250,24 @@ if (extras[AU.SRCN.MUSICA - 3].inicio !== AU.ARAM.MUSICA || extras[AU.SRCN.FALA 
 const spc = AU.spcBlob(extras);
 w('spc.bin', spc);
 const music = AU.musicData();
-// ROM: vozes fixas (carga no boot) e musica em sequencia a partir do banco SONS_BANCO
-// (regiao principal, bancos 13-27: um stream pode atravessar de um banco para o
-// seguinte). As falas vao na principal enquanto couberem; as outras vao inteiras no
-// que sobra dos bancos das animacoes (fim do 30 e o 31), apontadas por rotulo.
-const SONS_BANCO = 13, SONS_FIM = 27;
-const { BYTES: ANIM_QB } = require('./gerador/anim');
-const animUsa = (b) => Math.max(0, Math.min(ANIM.n - (b - 29) * Math.floor(0x8000 / ANIM_QB), Math.floor(0x8000 / ANIM_QB))) * ANIM_QB;
-const extrasRom = [30, 31].map((b) => ({ banco: b, livre: 0x8000 - animUsa(b), itens: [], usado: 0 }));
+// ROM: todo o audio (vozes fixas, carregadas no boot, musica e falas) em sequencia nos
+// bancos 32-63, a segunda metade da ROM de 2 MB (um stream pode atravessar de um banco
+// para o seguinte). Os bancos 13-27 ficaram livres quando o audio foi para la.
+const SONS_BANCO = 32, SONS_FIM = 63;
 const partes = [fixas];
 let ofs = fixas.length;
-const principal = (SONS_FIM - SONS_BANCO + 1) * 0x8000;
-const musica = SO.streams.filter((v) => v.tipo === 'musica');
-const falas = SO.streams.filter((v) => v.tipo !== 'musica').sort((x, y) => y.brr.length - x.brr.length);
-const lugar = new Map();
-let livrePrincipal = principal - fixas.length - musica.reduce((t, v) => t + v.brr.length, 0);
-for (const v of falas) {                 // as maiores primeiro: nos bancos extras, depois na principal
-  const e = extrasRom.find((r) => r.livre - r.usado >= v.brr.length);
-  if (e) { e.itens.push(v); e.usado += v.brr.length; lugar.set(v.id, { banco: e.banco }); continue; }
-  if (livrePrincipal < v.brr.length) throw new Error(`sons: a fala ${v.id} (${v.brr.length} bytes) nao cabe na ROM`);
-  livrePrincipal -= v.brr.length;
-  lugar.set(v.id, { principal: true });
-}
-const streams = SO.streams.map((v) => {
-  if (v.tipo === 'musica' || lugar.get(v.id).principal) { const o = ofs; partes.push(v.brr); ofs += v.brr.length; return { ...v, ofs: o }; }
-  return { ...v, rotulo: 'SomVoz_' + v.id };
-});
+const streams = SO.streams.map((v) => { const o = ofs; partes.push(v.brr); ofs += v.brr.length; return { ...v, ofs: o }; });
 const sonsBin = Buffer.concat(partes);
 w('sons.bin', sonsBin);
 const romEnd = (o) => '$' + ((SONS_BANCO + (o >> 15)) * 0x10000 + 0x8000 + (o & 0x7FFF)).toString(16).toUpperCase().padStart(6, '0');
 const sonsInc = ['; gerado por build.js - vozes e musica gravadas (BRR), um pedaco por banco'];
 for (let o = 0, b = SONS_BANCO; o < sonsBin.length; o += 0x8000, b++) {
-  if (b > SONS_FIM) throw new Error(`sons passam do banco ${SONS_FIM}`);
+  if (b > SONS_FIM) throw new Error(`sons passam do banco ${SONS_FIM} (fim da ROM de 2 MB)`);
   sonsInc.push(`.segment "BANK${b}"`, `  .incbin "gen/sons.bin", ${o}, ${Math.min(0x8000, sonsBin.length - o)}`);
 }
-for (const e of extrasRom) {
-  if (!e.itens.length) continue;
-  const bin = `sons_b${e.banco}.bin`;
-  w(bin, Buffer.concat(e.itens.map((v) => v.brr)));
-  sonsInc.push(`.segment "BANK${e.banco}"`);       // (depois das animacoes no mesmo banco)
-  let o = 0;
-  for (const v of e.itens) { sonsInc.push(`SomVoz_${v.id}: .incbin "gen/${bin}", ${o}, ${v.brr.length}`); o += v.brr.length; }
-}
 w('sons.inc', sonsInc.join('\n') + '\n');
-console.log(`sons na ROM: ${sonsBin.length} bytes nos bancos ${SONS_BANCO}-${SONS_BANCO + ((sonsBin.length - 1) >> 15)}` +
-  extrasRom.filter((e) => e.itens.length).map((e) => `, ${e.usado} no banco ${e.banco} (${e.itens.map((v) => v.id).join(' ')})`).join('') +
-  `; livre: ${livrePrincipal} na principal, ` + extrasRom.map((e) => `${e.livre - e.usado} no ${e.banco}`).join(', '));
+const livreSons = (SONS_FIM - SONS_BANCO + 1) * 0x8000 - sonsBin.length;
+console.log(`sons na ROM: ${sonsBin.length} bytes (bancos ${SONS_BANCO}-${SONS_BANCO + ((sonsBin.length - 1) >> 15)}; livres ${livreSons})`);
 
 // ------------------------------------------------------------ includes
 const inc = [];
@@ -322,7 +294,7 @@ inc.push(`SPC_SIZE = ${spc.length}`);
   col('VozSrcn', '.byte', (v, i) => (v.tipo === 'fixa' ? AU.SRCN.FIXA0 + i : v.tipo === 'musica' ? AU.SRCN.MUSICA : AU.SRCN.FALA));
   col('VozPitch', '.word', (v) => hex4(pitch(v.taxa)));
   col('VozQuadros', '.word', (v) => Math.ceil((v.brr.length / 9) * 16 / v.taxa * FPS) + 2);
-  col('VozRom', '.faraddr', (v) => (v.tipo === 'fixa' ? '0' : v.rotulo || romEnd(v.ofs)));
+  col('VozRom', '.faraddr', (v) => (v.tipo === 'fixa' ? '0' : romEnd(v.ofs)));
   col('VozLen', '.faraddr', (v) => (v.tipo === 'fixa' ? 0 : v.brr.length));
   col('VozBpq', '.word', (v) => Math.round(v.taxa * 9 / 16 / FPS * 256));          // bytes por quadro (8.8)
   col('VozFolga', '.word', (v) => Math.round(v.taxa * 9 / 16 * (v.tipo === 'musica' ? 0.5 : 0.15) / 3) * 3); // folga no anel
