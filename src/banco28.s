@@ -1159,6 +1159,8 @@ AjIcoTile: .word SPR_AJ_CONTROLE, SPR_AJ_LIVRO, SPR_ESTRELA, SPR_AJ_GRAFICO
 HudFixo:
     .a8
     .i16
+    lda #1                  ; o HUD foi redesenhado: os numeros tambem
+    sta hud_forca
     PRINT0 TXT_HUD_DP, HUD_HORA_COL+2, HUD_LIN_TOPO, 4
     rtl
 
@@ -1191,9 +1193,50 @@ HudFixo:
     jsr HudNum
 .endmacro
 
+; o que o HUD mostra (um byte de cada): so reimprime quando algo muda
+HudSig:
+    .word s_day, s_day+1, s_money, s_money+1, s_money+2, s_money+3, s_level, d_hour
+    .word d_min, s_stock, s_stock+1, s_rep, d_perfect, d_happy, d_boss, d_goal, d_event
+HUD_SIG_N = 17
+
 HudValores:
     .a8
     .i16
+    ; NumConv e PrintStr a cada quadro pesavam ~25% do quadro no fim do jogo (o tempo
+    ; que sobra e o do envio do audio): so reimprime quando um valor muda, e a cada
+    ; 32 quadros de qualquer jeito
+    lda hud_forca
+    bne @muda
+    lda frame
+    and #$1F
+    beq @muda
+    ldx #0
+@cmp:
+    A16
+    lda f:HudSig,x
+    tay
+    A8
+    lda a:0,y
+    cmp hud_ant,x
+    bne @muda
+    inx
+    inx
+    cpx #(HUD_SIG_N*2)
+    bne @cmp
+    rtl
+@muda:
+    stz hud_forca
+    ldx #0
+:   A16
+    lda f:HudSig,x
+    tay
+    A8
+    lda a:0,y
+    sta hud_ant,x
+    inx
+    inx
+    cpx #(HUD_SIG_N*2)
+    bne :-
     HUDNUM16 s_day, HUD_DIA_COL, HUD_LIN_TOPO, 4, HUD_DIA_W
     A16
     lda s_money

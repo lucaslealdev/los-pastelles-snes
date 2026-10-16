@@ -95,6 +95,9 @@ spr_tile:   .res 2
 spr_attr:   .res 1
 spr_size:   .res 1
 spr_hi:     .res 1
+spr_hix:    .res 2      ; AddSprite: indice na SprHiTab (o byte de cima fica 0)
+oam_hib:    .res 2      ; AddSprite: byte da tabela alta do proximo slot
+oam_his:    .res 1      ; AddSprite: (slot % 4) * 4 do proximo slot
 txt_pos:    .res 2
 txt_attr:   .res 1
 txt_ptr:    .res 3
@@ -217,7 +220,7 @@ FastReset:
     sta BG3VOFS
     lda #$15                ; BG1 + BG3 + OBJ
     sta TM
-    jsr OamClear
+    jsr OamZera
     jsr ClearBg3
     stz bright
     lda #$FF
@@ -702,6 +705,15 @@ NumConv:
     .i16
     ldx #0
     ldy #0
+    A16
+    lda num+2               ; cabe em 16 bits (< 100000): os 3 primeiros digitos sao 0
+    A8
+    bne @digit
+    stz numdig
+    stz numdig+1
+    stz numdig+2
+    ldx #12
+    ldy #3
 @digit:
     lda #0
     sta numdig,y
@@ -778,7 +790,36 @@ PrintNum:
     jmp PrintStr
 
 ; ---------------------------------------------------------------- sprites
+; esconde (y = $F0) so os sprites postos desde a ultima limpeza (os slots de botoes
+; e pilula sao dos BtnSprites/PillSprites) e zera a tabela alta deles
 OamClear:
+    .a8
+    .i16
+    ldx oam_idx
+    beq @h
+    lda #$F0
+@l: dex
+    dex
+    dex
+    dex
+    sta oam_buf+1,x
+    bne @l
+@h: A16
+    ldx #0
+:   stz oam_buf+512,x
+    inx
+    inx
+    cpx #(OAM_BTN/16)
+    bcc :-
+    A8
+    ldx #0
+    stx oam_idx
+    stx oam_hib
+    stz oam_his
+    rts
+
+; apaga a OAM inteira (boot: a RAM zerada poria 128 sprites no canto)
+OamZera:
     .a8
     .i16
     ldx #0
@@ -800,26 +841,25 @@ OamClear:
     bne @h
     ldx #0
     stx oam_idx
+    stx oam_hib
+    stz oam_his
     rts
 
 ; adiciona sprite: spr_x(16, com sinal), spr_y, spr_tile(9 bits), spr_attr, spr_size(0=8x8 1=16x16)
 AddSprite:
     .a8
     .i16
-    A16
-    lda spr_x
-    bmi @neg
-    cmp #256
-    bcs @skip16
-    bra @ok
-@neg:
-    cmp #$FFE1
-    bcc @skip16
-@ok:
-    A8
+    ; (rodava ~70 vezes por quadro no dia: sem trocar a largura dos registradores e
+    ; com a posicao na tabela alta acompanhando o slot, oam_hib/oam_his)
     ldx oam_idx
     cpx #OAM_BTN            ; os ultimos slots ficam para os botoes do texto
     bcs @skip
+    lda spr_x+1             ; x de 0 a 255
+    bne @alto
+    lda spr_size            ; bits altos: tamanho (bit 1), x9 = 0
+    asl a
+@hb:
+    sta spr_hi
     lda spr_x
     sta oam_buf,x
     lda spr_y
@@ -830,51 +870,45 @@ AddSprite:
     and #$01
     ora spr_attr
     sta oam_buf+3,x
-    ; bits altos: x9 e tamanho
-    lda spr_x+1
-    and #$01
-    sta spr_hi
-    lda spr_size
-    beq :+
     lda spr_hi
-    ora #$02
-    sta spr_hi
-:   lda spr_hi
     beq @adv
-    A16
-    txa
-    lsr a
-    lsr a
-    and #$0003
-    tay
-    txa
-    lsr a
-    lsr a
-    lsr a
-    lsr a
-    tax
-    A8
-    lda spr_hi
-@sh:
-    cpy #0
-    beq @shd
-    asl a
-    asl a
-    dey
-    bra @sh
-@shd:
-    ora oam_buf+512,x
-    sta oam_buf+512,x
+    ora oam_his             ; SprHiTab[(slot % 4) * 4 + bits]
+    sta spr_hix             ; (o byte de cima de spr_hix e sempre 0)
+    ldy spr_hix
+    lda SprHiTab,y
+    ldy oam_hib
+    ora oam_buf+512,y
+    sta oam_buf+512,y
 @adv:
-    A16
-    lda oam_idx
+    inx
+    inx
+    inx
+    inx
+    stx oam_idx
+    lda oam_his
     clc
     adc #4
-    sta oam_idx
-@skip16:
-    A8
+    and #$0F
+    sta oam_his
+    bne @skip
+    ldy oam_hib
+    iny
+    sty oam_hib
 @skip:
     rts
+@alto:
+    inc a                   ; $FF (x negativo) -> 0; x >= 256: fora da tela
+    bne @skip
+    lda spr_x
+    cmp #$E1                ; ate 31 pixels para a esquerda
+    bcc @skip
+    lda spr_size
+    asl a
+    ora #$01                ; x9
+    bra @hb
+
+; bits altos (b = 0..3) ja no lugar do slot s % 4: SprHiTab[s * 4 + b] = b << (2 * s)
+SprHiTab: .byte 0, 1, 2, 3,  0, 4, 8, 12,  0, 16, 32, 48,  0, 64, 128, 192
 
 ; sprite 32x32 (4 sprites de 16x16) em spr_x/spr_y, spr_tile = canto superior esquerdo
 AddSprite32:
