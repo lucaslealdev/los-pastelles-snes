@@ -51,13 +51,30 @@ const CORTE = 'silenceremove=start_periods=1:start_threshold=-42dB:start_silence
 function hashArq(p) { return crypto.createHash('sha1').update(fs.readFileSync(p)).digest('hex'); }
 function temFfmpeg() { try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }); return true; } catch (e) { return false; } }
 
-// MP3 -> Int16Array mono na taxa pedida (sem silencio nas pontas; musica sem corte)
+// MP3 -> Int16Array mono na taxa pedida (sem silencio nas pontas; musica sem corte),
+// com o resampler soxr de alta precisao
 function pcm(arq, taxa, cortar) {
   const args = ['-v', 'error', '-i', path.join(DIR, arq + '.mp3')];
-  if (cortar) args.push('-af', CORTE);
-  args.push('-ac', '1', '-ar', String(taxa), '-f', 's16le', '-');
+  const rs = `aresample=${taxa}:resampler=soxr:precision=28`;
+  args.push('-af', cortar ? CORTE + ',' + rs : rs);
+  args.push('-ac', '1', '-f', 's16le', '-');
   const raw = execFileSync('ffmpeg', args, { maxBuffer: 1 << 28 });
   return new Int16Array(raw.buffer, raw.byteOffset, raw.length >> 1);
+}
+// reforco de agudos: o DSP toca as amostras com interpolacao gaussiana, que abafa
+// os agudos (-2 dB a 0,2 e -9 dB a 0,4 da taxa da amostra). Este FIR simetrico (o
+// do BRRtools) compensa antes de codificar. Medido na saida simulada do DSP (tabela
+// gaussiana do Mesen, gen/brrexp): +1,5 dB de SNR nas falas a 14 kHz, +4 a +5 dB
+// nas fixas a 9 kHz. O pico e acertado depois, em normaliza.
+const AGUDOS = [0.912962, -0.16199, -0.0153283, 0.0426783, -0.0372004, 0.023436, -0.0105816, 0.00250474];
+function agudos(x) {
+  const y = new Float64Array(x.length);
+  for (let i = 0; i < x.length; i++) {
+    let a = x[i] * AGUDOS[0];
+    for (let k = 1; k < AGUDOS.length; k++) a += AGUDOS[k] * ((x[i + k] || 0) + (x[i - k] || 0));
+    y[i] = a;
+  }
+  return y;
 }
 // volume com folga (pico em ~67%, -3,5 dB): o BRR passa um pouco do original nos
 // picos e a voz ainda soma com a musica na mixagem do DSP
@@ -116,11 +133,11 @@ function sons(espacoFixas) {
   const r = { taxaFixas: tf, fixas: [], streams: [] };
   for (const v of VOZES) {
     const taxa = v.tipo === 'fixa' ? tf : v.tipo === 'musica' ? TAXA_MUSICA : TAXA_STREAM;
-    const brr = converte(v.id, v.arq, taxa, () => normaliza(pcm(v.arq, taxa, v.tipo !== 'musica')));
+    const brr = converte(v.id, v.arq, taxa, () => normaliza(agudos(pcm(v.arq, taxa, v.tipo !== 'musica'))));
     const item = { ...v, taxa, brr };
     (v.tipo === 'fixa' ? r.fixas : r.streams).push(item);
   }
-  r.fritura = converte('FRITURA', FRITURA.arq, tf, () => loopFritura(normaliza(pcm(FRITURA.arq, tf, false)), tf));
+  r.fritura = converte('FRITURA', FRITURA.arq, tf, () => loopFritura(normaliza(agudos(pcm(FRITURA.arq, tf, false))), tf));
   return r;
 }
 
