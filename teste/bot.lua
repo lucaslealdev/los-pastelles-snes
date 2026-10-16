@@ -106,7 +106,7 @@ emu.addEventCallback(function()
     elseif (st == 1 and f > 250) or st == 2 or (st == 5 and stf > 100) then if f % 30 == 0 then b = "a"; if st == 2 and CARDSHOT then shot("card") end end
     elseif st == 4 and PAUSETEST and tirou["pausa"] and not tirou["pausa2"] then
       if r8("d_paused") == 0 then b = "start" else tirou["pausa2"] = true; shot("pausa") end
-    elseif st == 4 then b = botday()
+    elseif st == 4 then if not BOT_PARADO then b = botday() end   -- BOT_PARADO: o script de teste controla
     elseif st == 6 then
       if r8("shop_aba") == 1 and stf > 60 and not tirou["loja_aba"] then tirou["loja_aba"] = true; shot("loja_aba") end
       b = SHOP(r8, r16, f)
