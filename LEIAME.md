@@ -66,6 +66,6 @@ monta a ROM com o cc65 (em `tools/cc65`).
 - Testado com memória aleatória ao ligar, como num console real.
 
 ## Segredos (não estão no manual)
-- **Menu secreto:** na tela de título, aperte ↑ ↑ ↓ ↓ ← → ← → B A. Escolha um jogo salvo e use: +R$ 1.000, +1 nível, estoque cheio, liberar tudo e Pastel de Vento (frita sem gastar estoque). O jogo salvo fica marcado como ★FESTA e não ganha mais troféus.
+- **Menu secreto:** na tela de título, aperte ↑ ↑ ↓ ↓ ← → ← → B A. Escolha um jogo salvo e use: +R$ 1.000, +1 nível, estoque cheio, liberar tudo e Pastel de Vento (frita sem gastar estoque). O jogo salvo fica marcado como ★FESTA e não ganha mais troféus. O mesmo código também funciona na tela de digitar o PASSWORD: digite o código, depois o password, e aperte START para turbinar esse jogo no menu secreto antes de seguir jogando. Em cartuchos sem SRAM, o código na tela de título já abre o PASSWORD com o código aceito.
 - **Mascote dançando:** aperte SELECT 10 vezes na abertura "LOS PASTELLES APRESENTA".
 - No final do jogo, depois dos créditos, aparece uma dica sobre o código.

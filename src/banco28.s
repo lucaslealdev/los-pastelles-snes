@@ -2690,7 +2690,8 @@ SenhaDeriva:
 ; ---------------------------------------------------------------- tela do password
 ; senha_modo 0: digitar (do titulo). Teclado 8x4 com o alfabeto; {A} digita,
 ; {B} apaga (vazio: volta ao titulo), START confere. Valido: com SRAM escolhe
-; onde salvar (ST_SLOTS, sl_mode 3); sem SRAM vai direto para o dia.
+; onde salvar (ST_SLOTS, sl_mode 3); sem SRAM vai direto para o dia. Com o
+; codigo secreto digitado antes (pw_festa), passa primeiro pelo menu secreto.
 ; senha_modo 1/2: mostra o password do jogo atual (1 volta a loja, 2 ao titulo).
 PW_LIN   = 7                ; linha do password
 PW_COL   = 4                ; 5 blocos de 4 + 4 espacos = 24 colunas
@@ -2728,7 +2729,9 @@ SenhaInitL:
     bne @mostra
     stz pw_cur
     stz pw_tecla
-    stz pw_msg
+    stz pw_msg              ; pw_festa vem do titulo (codigo secreto sem SRAM)
+    stz pw_bdel
+    stz code_pos
     bra @d
 @mostra:
     jsl SenhaGera
@@ -2763,9 +2766,15 @@ SenhaDesenha:
     jsr SenhaLinhas
     jsr SenhaTeclado
     lda pw_msg
-    beq :+
+    beq @sec
     PRINT0 TXT_PW_INV, 3, PW_LINMSG, 5
-:   ldx #TXT_PW_AJ_D
+    bra @rod
+@sec:
+    lda pw_festa
+    beq @rod
+    PRINT0 TXT_PW_SEC, 3, PW_LINMSG, 6
+@rod:
+    ldx #TXT_PW_AJ_D
     lda #26
     FAR0 Footer
     rts
@@ -2950,7 +2959,24 @@ SenhaUpdateL:
     and #$0F
     bne :+
     jsr SenhaLinhas
-:   ; cruz: anda no teclado (da a volta nas bordas)
+:   ; codigo secreto (o mesmo do titulo): START com o password abre o menu
+    ; secreto. As setas se anulam no teclado, o B do codigo nao apaga nada e o A
+    ; final nao digita.
+    FAR0 CodeCheck
+    bcc @ncod
+    lda pw_bdel
+    beq :+
+    inc pw_cur
+:   stz pw_bdel
+    lda #1
+    sta pw_festa
+    stz pw_msg
+    lda #SFX_NIVEL
+    FAR0 PlaySfx
+    jsr SenhaDesenha
+    rtl
+@ncod:
+    ; cruz: anda no teclado (da a volta nas bordas)
     lda pad_new+1
     and #KH_LEFT
     beq @nl
@@ -3015,19 +3041,34 @@ SenhaUpdateL:
     inc pw_cur
     lda #SFX_CURSOR
     FAR0 PlaySfx
-    bra @redes
+    jmp @redes
 @na:
     lda pad_new+1
     and #KH_B
     beq @nb
+    stz pw_bdel
+    lda code_pos            ; B do codigo secreto (so falta o A)?
+    cmp #9
+    bne @bnor
     lda pw_cur
-    bne :+
+    beq @bcod               ; vazio: nao sai para o titulo
+    inc pw_bdel             ; apaga, e o A do codigo devolve
+    bra @apaga
+@bcod:
+    lda #SFX_CURSOR
+    FAR0 PlaySfx
+    rtl
+@bnor:
+    lda pw_cur
+    bne @apaga
     lda #SFX_CURSOR         ; nada digitado: volta ao titulo
     FAR0 PlaySfx
+    stz pw_festa
     lda #ST_TITLE
     sta next_state
     rtl
-:   dec pw_cur
+@apaga:
+    dec pw_cur
     lda #SFX_CURSOR
     FAR0 PlaySfx
     bra @redes
@@ -3043,7 +3084,12 @@ SenhaUpdateL:
     bcc @inv
     lda #SFX_OK
     FAR0 PlaySfx
-    lda tem_sram
+    lda pw_festa            ; codigo secreto: turbinar antes (o menu segue o jogo)
+    beq :+
+    lda #ST_SECRET
+    sta next_state
+    rtl
+:   lda tem_sram
     beq :+
     lda #3                  ; com SRAM: escolher onde salvar
     sta sl_mode

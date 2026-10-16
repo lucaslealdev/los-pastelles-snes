@@ -263,6 +263,16 @@ TitleUpdate:
     jsr CodeCheck
     bcc :+
     SFX SFX_NIVEL
+    lda tem_sram
+    bne @secsram
+    ; sem SRAM nao ha jogo salvo: o menu secreto vem pelo password
+    stz senha_modo
+    lda #1
+    sta pw_festa
+    lda #ST_SENHA
+    sta next_state
+    rts
+@secsram:
     lda #2
     sta sl_mode
     lda #ST_SLOTS
@@ -317,6 +327,7 @@ TitleUpdate:
     rts
 @senha:
     stz senha_modo          ; digitar o password
+    stz pw_festa
     lda #ST_SENHA
     sta next_state
     rts

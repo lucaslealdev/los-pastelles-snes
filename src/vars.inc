@@ -198,6 +198,8 @@ pw_n:       .res 1      ; quantos bits
 pw_cur:     .res 1      ; digitar: quantos simbolos ja foram digitados
 pw_tecla:   .res 1      ; digitar: tecla escolhida (0..31)
 pw_msg:     .res 1      ; 1 = password invalido
+pw_festa:   .res 1      ; 1 = codigo secreto digitado no password (START abre o menu secreto)
+pw_bdel:    .res 1      ; o B do codigo secreto apagou um simbolo (o A final devolve)
 pw_trof:    .res 1      ; s_trof bits 5..7
 pw_tflags:  .res 1      ; s_tflags bits 0..2
 pw_versao:  .res 1
