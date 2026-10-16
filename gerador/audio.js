@@ -37,11 +37,15 @@ const lo = (v) => v & 255, hi = (v) => v >> 8;
 //    ponteiro A/B = porta2/3. Esses comandos devolvem o ENDX na porta 1.
 // Sempre ecoa a porta 0 no fim. No inicio avisa "pronto" ($D5 na porta 1) depois de
 // ler a porta 0: sem isso o 1o comando do CPU pode ser tomado como valor inicial.
+// O eco sai logo depois de gravar os 3 bytes, antes de avancar o ponteiro: o CPU
+// ja escreve o proximo trio enquanto o SPC700 soma 3 (o envio e limitado pelo laco
+// do SPC700, ~2 bytes por linha de video; isso tira a espera do CPU do caminho).
 const DADOS = (p) => [
   [0x8D, 0x00],                                       // mov y,#0
   [0xE4, 0xF5, 0xD7, p, 0xFC],                        // mov a,$F5 / mov [p]+y,a / inc y
   [0xE4, 0xF6, 0xD7, p, 0xFC],
   [0xE4, 0xF7, 0xD7, p],
+  [0xFA, 0x00, 0xF4],                                 // mov $F4,$00 (eco)
   [0x60, 0x98, 0x03, p, 0x98, 0x00, p + 1],           // clrc / adc p,#3 / adc p+1,#0
 ];
 // No console a leitura de uma porta no mesmo instante em que o CPU a escreve pode
@@ -66,14 +70,15 @@ const DRIVER = monta(ARAM.DRIVER, [
   { br: 0xD0, alvo: 'laco' },                         // bne laco (mudou no meio)
   [0x64, 0x00],                                       // cmp a,$00
   { br: 0xF0, alvo: 'laco' },                         // beq laco
-  [0xC4, 0x00],                                       // mov $00,a
-  { br: 0xF3, pre: [0x00], alvo: 'cmd' },             // bbc7 $00,cmd
-  { br: 0xC3, pre: [0x00], alvo: 'dadosB' },          // bbs6 $00,dadosB
+  [0xC4, 0x00, 0x5D],                                 // mov $00,a / mov x,a (mov dp,a nao mexe nos flags)
+  { br: 0x10, alvo: 'cmd' },                          // bpl cmd (bit 7 = 0: comando)
+  [0x28, 0x40],                                       // and a,#$40
+  { br: 0xD0, alvo: 'dadosB' },                       // bne dadosB (bit 6: ponteiro B)
   ...DADOS(0x02),
-  { br: 0x2F, alvo: 'ack' },
+  { br: 0x2F, alvo: 'laco' },
   { rot: 'dadosB' },
   ...DADOS(0x06),
-  { br: 0x2F, alvo: 'ack' },
+  { br: 0x2F, alvo: 'laco' },
   { rot: 'cmd' },
   [0xE4, 0xF5],                                       // mov a,$F5
   { br: 0x30, alvo: 'ptr' },                          // bmi ptr
