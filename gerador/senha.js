@@ -49,12 +49,11 @@ const LVXP = [];                    // [desafios, nivel, inicio do indice]
 
 // degraus (o valor guardado e o maior degrau <= valor real)
 const TAB = {
-  estoque: [...Array(100).keys(), ...Array.from({ length: 20 }, (_, i) => 110 + 10 * i),
-    ...Array.from({ length: 14 }, (_, i) => 350 + 50 * i)],
+  estoque: [...Array(200).keys(), ...Array.from({ length: 80 }, (_, i) => 200 + 10 * i)],  // exato ate 199
   felizes: [0, 1, 10, 25, 50, 100, 250, 500],      // missoes 3, 6; trofeus 1, 100, 500
   perfeitos: [0, 5, 15, 30, 50, 100, 200, 300],    // missao 4; trofeus 50, 300
   entregas: [0, 25, 50, 100],                      // trofeu 100
-  duelos: [0, 1, 3, 5],                            // trofeu 5
+  duelos: [0, 2, 5],                               // trofeu 5 (raros: 3 degraus pagam o estoque exato)
 };
 
 const DIN_MANT = 512, DIN_EXP = 15;     // digito do dinheiro: 0..DIN_MANT*(DIN_EXP+1)-1

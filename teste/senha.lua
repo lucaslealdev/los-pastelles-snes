@@ -28,7 +28,7 @@ local function erro(s) ok = false; print("ERRO: " .. s) end
 -- [variavel, bytes, valor posto, valor esperado depois do password]
 local CASOS = {
   {"s_day", 2, 37, 37}, {"s_money", 4, 123456, 123392},       -- dinheiro: 9 bits de mantissa
-  {"s_stock", 2, 88, 88}, {"s_level", 1, 12, 12}, {"s_xp", 2, 300, 296},  -- xp de 8 em 8
+  {"s_stock", 2, 187, 187}, {"s_level", 1, 12, 12}, {"s_xp", 2, 300, 296},  -- xp de 8 em 8
   {"s_rep", 1, 77, 76},                                       -- reputacao de 2 em 2
   {"s_fryer", 1, 3, 3}, {"s_counter", 1, 2, 2}, {"s_attend", 1, 1, 1}, {"s_ads", 1, 0, 0},
   {"s_stores", 1, 2, 2}, {"s_fran", 1, 1, 1}, {"s_boss", 1, 2, 2}, {"s_mission", 1, 9, 9},
@@ -64,10 +64,9 @@ end
 local TETOS = { [0] = 5, 12, 20, 30, 99 }
 local function degrau(t, v) local r = t[1] for _, x in ipairs(t) do if x <= v then r = x end end return r end
 local T_EST = {}
-for i = 0, 99 do T_EST[#T_EST + 1] = i end
-for i = 0, 19 do T_EST[#T_EST + 1] = 110 + 10 * i end
-for i = 0, 13 do T_EST[#T_EST + 1] = 350 + 50 * i end
-local T_FEL, T_PER, T_ENT, T_DUE = {0, 1, 10, 25, 50, 100, 250, 500}, {0, 5, 15, 30, 50, 100, 200, 300}, {0, 25, 50, 100}, {0, 1, 3, 5}
+for i = 0, 199 do T_EST[#T_EST + 1] = i end
+for i = 0, 79 do T_EST[#T_EST + 1] = 200 + 10 * i end
+local T_FEL, T_PER, T_ENT, T_DUE = {0, 1, 10, 25, 50, 100, 250, 500}, {0, 5, 15, 30, 50, 100, 200, 300}, {0, 25, 50, 100}, {0, 2, 5}
 local function sorteia(n)
   local r = math.random
   local b = r(0, 4)
