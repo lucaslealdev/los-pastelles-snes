@@ -1630,7 +1630,7 @@ MgaAcerto:
     jsl AnimVai
     cpx #(MGA_CHAVES-1)
     bne @r
-    lda #40                 ; pastel pronto aparece um pouco e o cartao some
+    lda #24                 ; pastel pronto aparece um pouco e o cartao some
     jsl AnimSome
 @r: rtl
 

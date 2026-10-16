@@ -81,7 +81,8 @@ Ordenadas da mais simples para a mais complexa, respeitando dependências (fazer
      - Trocar a HUD atual por balões (estilo do balão do tutorial / pílula), ícones de emoji (moeda, relógio, estrela etc.) e texto estilizado.
      - Cuidado com o limite de 32 sprites / 34 tiles por linha durante o jogo e com as paletas de sprite 3–7, que são dos clientes. Reservar espaço/sprites para os indicadores dos itens 1 e 2.
 
-10. - [ ] **Animação grande da montagem do pastel (minigame).**
+10. - [x] **Animação grande da montagem do pastel (minigame).**
+      - Feito: cartão creme no BG2 na cozinha (64×48 px de pastel): massa → recheio (emoji do sabor por cima do monte) → dobra → fechamento com o garfo 🍴 → pronto ✨, com 2 quadros de morph entre as chaves (`gerador/morph.py`). Cada acerto anda até a chave proporcional ao progresso; errar chama `MgaErro` (gancho para o item 11). Player genérico `Anim*` em `src/banco28.s`; quadros nos bancos 29–31. Interface no CLAUDE.md ("Big animations"). Teste: `teste/montagem.lua`.
      - Pelo menos 5 quadros-chave da montagem (massa → recheio → dobra → fechamento → pastel pronto), exibidos grandes na tela.
      - Cada acerto de botão sorteado avança a animação; errar desvia para o desfecho de erro (item 11).
      - Arte baseada em emojis/glyphs da internet (Twemoji, como o resto do projeto), com quadros intermediários gerados por morph entre os quadros-chave para suavizar o movimento.
