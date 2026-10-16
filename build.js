@@ -287,7 +287,9 @@ inc.push(`SPC_SIZE = ${spc.length}`);
   V.forEach((v, i) => inc.push(`VOZ_${v.id} = ${i}`));
   inc.push(`VOZ_N = ${V.length}`, `MUSICA_ARAM = ${hex4(AU.ARAM.MUSICA)}`, `MUSICA_LEN = ${AU.ARAM.MUSICA_LEN}`,
     `FALA_ARAM = ${hex4(AU.ARAM.FALA)}`, `FALA_LEN = ${AU.ARAM.FALA_LEN}`, `ECO_ARAM = ${hex4(AU.ARAM.ECO)}`, `SRCN_MUSICA = ${AU.SRCN.MUSICA}`, `SRCN_FALA = ${AU.SRCN.FALA}`, `SRCN_FRITURA = ${AU.SRCN.FRITURA}`, `FRITURA_PITCH = ${hex4(pitch(SO.taxaFixas))}`,
-    `FIXAS_ARAM = ${hex4(AU.ARAM.FIXAS)}`, `FIXAS_LEN = ${fixas.length}`, `FIXAS_ROM = ${romEnd(0)}`);
+    `FIXAS_ARAM = ${hex4(AU.ARAM.FIXAS)}`, `FIXAS_LEN = ${fixas.length}`, `FIXAS_ROM = ${romEnd(0)}`,
+    // musica com menos que isso no anel (0,2 s) passa na frente das falas (Bomba)
+    `MUS_CRITICO = ${Math.round(SO.streams.find((v) => v.tipo === 'musica').taxa * 9 / 16 * 0.2)}`);
   const tab = ['; gerado por build.js - tabelas das vozes (gerador/sons.js)'];
   const col = (nome, dir, fn) => tab.push(`${nome}: ${dir} ` + V.map(fn).join(', '));
   col('VozTipo', '.byte', (v) => (v.tipo === 'fixa' ? 0 : v.tipo === 'musica' ? 2 : 1));

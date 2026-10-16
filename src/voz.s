@@ -9,7 +9,6 @@
 ; =====================================================================
 
 LOTE_MAX = 72               ; bytes por lote (24 trios, ~2 ms): reparte o tempo ocioso
-MUS_CRITICO = 1125          ; musica com menos que isso no anel (0,2 s a 10 kHz) passa na frente
 
 ; Lote: manda trios direto da ROM ([ptr],y), sem eventos no meio (o chamador ja
 ; limitou o tamanho: X = bytes que podem ir). Busca os 3 bytes seguintes enquanto o

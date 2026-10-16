@@ -12,7 +12,9 @@ const ROOT = path.join(__dirname, '..');
 const DIR = path.join(ROOT, 'sounds'), CACHE = path.join(ROOT, 'arte_fonte', 'brr');
 
 // taxas (Hz). As fixas usam a maior taxa da lista que couber na memoria do SPC700.
-const TAXA_STREAM = 14000, TAXA_MUSICA = 10000;   // falas em stream: 14 kHz (melhoria 13)
+// medido com teste/audio_orc.lua num dia de fim de jogo (o envio ao SPC700 e o limite:
+// ~2,4 bytes por linha ociosa); a ROM de 2 MB guarda o audio nos bancos 32-63
+const TAXA_STREAM = 16000, TAXA_MUSICA = 14000;
 const TAXAS_FIXAS = [11025, 10000, 9600, 9000, 8000];
 
 // prioridade: 1 = fala comum, 2 = importante (interrompe as comuns); espera = segundos
